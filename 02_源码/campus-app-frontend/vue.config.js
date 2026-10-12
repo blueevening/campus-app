@@ -18,8 +18,8 @@ module.exports = defineConfig({
   },
 
   // 生产环境配置
-  // GitHub Pages 项目站路径为 /campus-app/
-  publicPath: process.env.NODE_ENV === 'production' ? '/campus-app/' : '/',
+  // GitHub Pages 项目站路径为 /xyfw/
+  publicPath: process.env.NODE_ENV === 'production' ? '/xyfw/' : '/',
   outputDir: 'dist',
   assetsDir: 'static',
 
