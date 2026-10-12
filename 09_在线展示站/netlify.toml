@@ -1,0 +1,10 @@
+# Netlify 靐态站点配置（若使用 Netlify CLI / Git 集成）
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "no-referrer-when-downgrade"
