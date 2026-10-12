@@ -1,0 +1,22 @@
+/* Vant 主题覆盖 —— 与 global.css 设计令牌保持一致 */
+
+:root:root {
+  --van-primary-color: #2c5282;
+  --van-button-primary-background: linear-gradient(135deg, #2c5282, #3b6ea8);
+  --van-button-primary-border-color: transparent;
+  --van-tabbar-item-active-color: #2c5282;
+  --van-tabbar-item-inactive-color: #93a1b1;
+  --van-tab-active-text-color: #2c5282;
+  --van-tab-active-line-color: #d69e2e;
+  --van-switch-on-background: #2c5282;
+  --van-checkbox-checked-icon-color: #2c5282;
+  --van-radio-checked-icon-color: #2c5282;
+  --van-slider-active-background: #2c5282;
+  --van-nav-bar-icon-color: #1f2d3d;
+  --van-nav-bar-text-color: #2c5282;
+  --van-nav-bar-background: #ffffff;
+  --van-search-content-background: #f0f4f8;
+  --van-cell-background: #ffffff;
+  --van-cell-group-background: transparent;
+  --van-toast-background: rgba(20, 36, 58, 0.92);
+}
