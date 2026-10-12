@@ -111,7 +111,7 @@ export default {
 html, body {
   margin: 0;
   padding: 0;
-  background: #e8eef5;
+  background: #eef2f7;
   color-scheme: light;
   height: 100%;
 }
@@ -120,20 +120,20 @@ html, body {
   min-height: 100vh;
   display: flex;
   background:
-    radial-gradient(ellipse at top, rgba(44, 82, 130, 0.10), transparent 50%),
-    linear-gradient(180deg, #dbe4ef 0%, #e8eef5 100%);
+    radial-gradient(ellipse at top, rgba(44, 82, 130, 0.12), transparent 55%),
+    linear-gradient(180deg, #e4ebf4 0%, #eef2f7 100%);
 }
 
 /* 网页端侧栏 */
 .side-nav {
-  width: 220px;
+  width: 232px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, #1a365d 0%, #0d1b2a 100%);
+  background: linear-gradient(180deg, #1a365d 0%, #12243a 100%);
   color: #fff;
-  padding: 20px 14px;
+  padding: 22px 14px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 22px;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -142,31 +142,33 @@ html, body {
 
 .side-brand {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
-  padding: 4px 8px 12px;
+  padding: 6px 10px 14px;
   border-bottom: 1px solid rgba(255,255,255,.1);
 }
 
 .side-logo {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
-  background: #d69e2e;
+  background: linear-gradient(135deg, #d69e2e, #e0b44a);
   color: #1a202c;
   display: grid;
   place-items: center;
   font-weight: 800;
   flex-shrink: 0;
+  box-shadow: 0 8px 16px rgba(214, 158, 46, 0.28);
 }
 
 .side-brand strong {
   display: block;
   font-size: 15px;
+  letter-spacing: 0.5px;
 }
 
 .side-brand small {
-  opacity: 0.7;
+  opacity: 0.72;
   font-size: 11px;
 }
 
@@ -184,18 +186,20 @@ html, body {
   border-radius: 12px;
   color: rgba(255,255,255,.78);
   font-size: 14px;
-  transition: background .15s ease, color .15s ease;
+  transition: background .15s ease, color .15s ease, transform .15s ease;
 }
 
 .side-item:hover {
   background: rgba(255,255,255,.08);
   color: #fff;
+  transform: translateX(2px);
 }
 
 .side-item.active {
   background: rgba(214, 158, 46, 0.22);
   color: #f6e05e;
   font-weight: 700;
+  box-shadow: inset 3px 0 0 #d69e2e;
 }
 
 .app-shell {
@@ -207,22 +211,23 @@ html, body {
 }
 
 .app-shell.with-side {
-  padding: 20px 24px;
+  padding: 20px 28px;
 }
 
 .app-frame {
   width: 100%;
   min-height: calc(100vh - 40px);
-  background: #f5f7fa;
+  background: #eef2f7;
   position: relative;
-  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.12);
-  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(20, 36, 58, 0.12);
+  border-radius: 18px;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
+  color: #1f2d3d;
   transform: translateZ(0);
+  border: 1px solid rgba(255,255,255,.65);
 }
 
 /* 网页端内容区更宽，随窗口拉伸 */
@@ -240,6 +245,7 @@ html, body {
   border-radius: 0;
   box-shadow: none;
   min-height: 100vh;
+  border: none;
 }
 
 .with-tabbar {

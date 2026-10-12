@@ -1,14 +1,12 @@
 <template>
-  <div class="second-class-container">
+  <div class="page second-class-page">
     <van-nav-bar title="第二课堂" left-arrow @click-left="goBack">
       <template #right>
         <van-icon name="records" size="20" @click="navigateTo('/second-class/records')" />
       </template>
     </van-nav-bar>
 
-    <!-- 积分统计卡片 -->
     <div class="credit-card">
-      <div class="credit-bg"></div>
       <div class="credit-content">
         <div class="credit-main">
           <div class="credit-item">
@@ -17,7 +15,7 @@
           </div>
           <div class="credit-divider"></div>
           <div class="credit-item">
-            <span class="credit-value">{{ creditInfo.integrityScore || 100 }}</span>
+            <span class="credit-value">{{ creditInfo.integrityScore ?? 100 }}</span>
             <span class="credit-label">诚信值</span>
           </div>
         </div>
@@ -27,27 +25,27 @@
             <span>{{ progressPercent }}%</span>
           </div>
           <div class="progress-bar">
-            <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+            <div
+              class="progress-fill"
+              :class="{ done: progressPercent >= 100 }"
+              :style="{ width: progressPercent + '%' }"
+            ></div>
           </div>
         </div>
         <div class="credit-status">
-          <van-tag v-if="creditInfo.reachedTarget" type="success" size="medium">
-            ✓ 已达标
-          </van-tag>
-          <van-tag v-else type="warning" size="medium">
-            未达标
-          </van-tag>
-          <van-tag v-if="creditInfo.integrityScore < 80" type="danger" size="medium" class="integrity-tag">
+          <span class="tag" :class="creditInfo.reachedTarget || progressPercent >= 100 ? 'tag-green' : 'tag-gold'">
+            {{ creditInfo.reachedTarget || progressPercent >= 100 ? '已达标' : '未达标' }}
+          </span>
+          <span v-if="(creditInfo.integrityScore ?? 100) < 80" class="tag tag-red">
             诚信值不足，需恢复
-          </van-tag>
+          </span>
         </div>
       </div>
     </div>
 
-    <!-- 诚信值恢复提示 -->
-    <div v-if="creditInfo.integrityScore < 80" class="restore-section">
+    <div v-if="(creditInfo.integrityScore ?? 100) < 80" class="restore-section">
       <div class="restore-header">
-        <van-icon name="warning-o" color="#ee0a24" />
+        <van-icon name="warning-o" color="var(--danger)" />
         <span>诚信值不足80，请参加指定活动恢复诚信值</span>
       </div>
       <van-button type="danger" size="small" round @click="handleRestoreIntegrity">
@@ -55,36 +53,35 @@
       </van-button>
     </div>
 
-    <!-- 学分看板 -->
-    <div class="cert-banner" @click="navigateTo('/second-class/dashboard')">
-      <div class="cert-banner-left">
-        <van-icon name="chart-trending-o" size="28" color="#2c5282" />
+    <div class="banner-card gold" @click="navigateTo('/second-class/dashboard')">
+      <div class="banner-left">
+        <div class="banner-icon gold-bg">
+          <van-icon name="chart-trending-o" size="22" color="var(--accent)" />
+        </div>
         <div>
           <h4>学分看板</h4>
           <p>活动 / 证书积分与诚信值总览</p>
         </div>
       </div>
-      <div class="cert-banner-right">
-        <van-icon name="arrow" />
-      </div>
+      <van-icon name="arrow" color="var(--text-muted)" />
     </div>
 
-    <!-- 证书申请入口 -->
-    <div class="cert-banner" @click="navigateTo('/certificate/apply')">
-      <div class="cert-banner-left">
-        <van-icon name="certificate" size="28" color="#f59e0b" />
+    <div class="banner-card" @click="navigateTo('/certificate/apply')">
+      <div class="banner-left">
+        <div class="banner-icon blue-bg">
+          <van-icon name="certificate" size="22" color="var(--primary)" />
+        </div>
         <div>
           <h4>证书申请</h4>
           <p>上传证书获取积分，最高+20分</p>
         </div>
       </div>
-      <div class="cert-banner-right">
-        <span class="cert-score-badge">2-20分</span>
-        <van-icon name="arrow" />
+      <div class="banner-right">
+        <span class="banner-badge">2-20分</span>
+        <van-icon name="arrow" color="var(--text-muted)" />
       </div>
     </div>
 
-    <!-- 状态筛选 -->
     <div class="phase-tabs">
       <button
         v-for="tab in phaseTabs"
@@ -98,7 +95,6 @@
       </button>
     </div>
 
-    <!-- 活动类型筛选 -->
     <div class="category-section">
       <div class="category-scroll">
         <div
@@ -121,7 +117,6 @@
       </div>
     </div>
 
-    <!-- 活动列表 -->
     <div class="activity-list" v-if="activities.length > 0">
       <div
         class="activity-card"
@@ -135,7 +130,6 @@
             height="150"
             fit="cover"
             :src="activityCover(activity)"
-            radius="12"
           />
           <div class="activity-score">
             <van-icon name="star-o" />
@@ -162,26 +156,28 @@
             </div>
           </div>
           <div class="activity-tags">
-            <span class="type-tag">{{ getTypeName(activity.activityType) }}</span>
+            <span class="tag tag-blue">{{ getTypeName(activity.activityType) }}</span>
+            <span v-if="activity.joined" class="tag tag-green">已报名</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 空状态 -->
-    <van-empty v-else description="暂无活动" />
+    <div v-else-if="loading" class="loading-wrap">
+      <van-loading type="spinner" color="var(--primary)">加载中...</van-loading>
+    </div>
 
-    <!-- 管理员发布按钮 -->
-    <div v-if="canPublish" class="publish-btn" @click="showPublishDialog = true">
+    <van-empty v-else :description="emptyText" />
+
+    <div v-if="canPublish" class="fab" @click="openPublish">
       <van-icon name="plus" size="24" color="#fff" />
     </div>
 
-    <!-- 发布活动弹窗 -->
-    <van-popup v-model:show="showPublishDialog" position="bottom" round style="height: 80%">
+    <van-popup v-model:show="showPublishDialog" position="bottom" round :style="{ height: '82%' }">
       <div class="publish-form">
         <div class="form-header">
           <h3>发布活动</h3>
-          <van-icon name="cross" @click="showPublishDialog = false" />
+          <van-icon name="cross" size="20" @click="showPublishDialog = false" />
         </div>
         <van-form @submit="handlePublish">
           <van-cell-group>
@@ -189,7 +185,7 @@
               v-model="publishForm.activityName"
               label="活动名称"
               placeholder="请输入活动名称"
-              required
+              :rules="[{ required: true, message: '请输入活动名称' }]"
             />
             <van-field
               v-model="publishForm.description"
@@ -203,12 +199,27 @@
               label="活动地点"
               placeholder="请输入活动地点"
             />
+            <van-field name="activityType" label="活动类型">
+              <template #input>
+                <div class="type-chips">
+                  <span
+                    v-for="t in activityTypes"
+                    :key="t.value"
+                    class="type-chip"
+                    :class="{ active: Number(publishForm.activityType) === t.value }"
+                    @click="publishForm.activityType = t.value"
+                  >
+                    {{ t.label }}
+                  </span>
+                </div>
+              </template>
+            </van-field>
             <van-field
               v-model="publishForm.score"
               label="积分"
               type="digit"
               placeholder="请输入积分"
-              required
+              :rules="[{ required: true, message: '请输入积分' }]"
             />
             <van-field
               v-model="publishForm.maxParticipants"
@@ -216,7 +227,7 @@
               type="digit"
               placeholder="不限制可不填"
             />
-            <van-field label="开始时间">
+            <van-field label="开始时间" required :rules="[{ required: true, message: '请选择开始时间' }]">
               <template #input>
                 <input
                   v-model="publishForm.startTime"
@@ -225,7 +236,7 @@
                 />
               </template>
             </van-field>
-            <van-field label="结束时间">
+            <van-field label="结束时间" required :rules="[{ required: true, message: '请选择结束时间' }]">
               <template #input>
                 <input
                   v-model="publishForm.endTime"
@@ -236,31 +247,13 @@
             </van-field>
           </van-cell-group>
           <div class="form-actions">
-            <van-button round block type="primary" native-type="submit">
+            <van-button round block type="primary" native-type="submit" :loading="publishing">
               发布活动
             </van-button>
           </div>
         </van-form>
       </div>
     </van-popup>
-
-    <!-- 时间选择器 -->
-    <van-datetime-picker
-      v-if="showStartTimePicker"
-      v-model="startTimeValue"
-      type="datetime"
-      title="选择开始时间"
-      @confirm="onStartTimeConfirm"
-      @cancel="showStartTimePicker = false"
-    />
-    <van-datetime-picker
-      v-if="showEndTimePicker"
-      v-model="endTimeValue"
-      type="datetime"
-      title="选择结束时间"
-      @confirm="onEndTimeConfirm"
-      @cancel="showEndTimePicker = false"
-    />
   </div>
 </template>
 
@@ -270,7 +263,7 @@ import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { showToast, showDialog } from 'vant'
 import { secondClassApi } from '../api'
-import { DEFAULT_COVER, activityCover } from '../utils/mediaDefaults'
+import { activityCover } from '../utils/mediaDefaults'
 
 export default {
   name: 'SecondClass',
@@ -283,17 +276,16 @@ export default {
     const activeType = ref('')
     const activePhase = ref('active')
     const joinedCount = ref(0)
+    const loading = ref(true)
+    const publishing = ref(false)
+    const showPublishDialog = ref(false)
+
     const phaseTabs = [
       { value: 'active', label: '未结束' },
       { value: 'enrolled', label: '已报名' },
       { value: 'ended', label: '已结束' },
       { value: '', label: '全部' }
     ]
-    const showPublishDialog = ref(false)
-    const showStartTimePicker = ref(false)
-    const showEndTimePicker = ref(false)
-    const startTimeValue = ref(new Date())
-    const endTimeValue = ref(new Date())
 
     const publishForm = ref({
       activityName: '',
@@ -306,7 +298,6 @@ export default {
       activityType: 1
     })
 
-    const isAdmin = computed(() => store.getters.getRole === 2)
     const canPublish = computed(() => {
       const r = Number(store.getters.getRole) || 0
       return r === 2 || r === 1
@@ -315,7 +306,14 @@ export default {
     const progressPercent = computed(() => {
       const score = creditInfo.value.secondClassScore || 0
       const target = creditInfo.value.targetScore || 120
-      return Math.min(Math.round(score / target * 100), 100)
+      return Math.min(Math.round((score / target) * 100), 100)
+    })
+
+    const emptyText = computed(() => {
+      if (activePhase.value === 'enrolled') return '还没有报名任何活动'
+      if (activePhase.value === 'ended') return '暂无已结束的活动'
+      if (activeType.value) return `暂无${getTypeName(activeType.value)}活动`
+      return '暂无活动'
     })
 
     const activityTypes = [
@@ -338,12 +336,7 @@ export default {
     }
 
     const getStatusText = (status) => {
-      const texts = {
-        0: '未开始',
-        1: '进行中',
-        2: '已结束',
-        3: '已取消'
-      }
+      const texts = { 0: '未开始', 1: '进行中', 2: '已结束', 3: '已取消' }
       return texts[status] || '未知'
     }
 
@@ -366,6 +359,7 @@ export default {
     }
 
     const loadActivities = async () => {
+      loading.value = true
       try {
         const res = await secondClassApi.getActivityList({
           pageNum: 1,
@@ -375,8 +369,14 @@ export default {
         })
         activities.value = res.data?.records || []
       } catch (error) {
-        console.error('获取活动失败', error)
+        activities.value = []
+        showToast(error?.message || '获取活动失败')
+      } finally {
+        loading.value = false
       }
+    }
+
+    const loadJoinedCount = async () => {
       try {
         const recRes = await secondClassApi.getUserRecords()
         joinedCount.value = (recRes.data || []).length
@@ -385,21 +385,23 @@ export default {
       }
     }
 
-    const switchPhase = (phase) => {
-      activePhase.value = phase
-      loadActivities()
-    }
-
     const loadCredit = async () => {
       try {
         const res = await secondClassApi.getUserCredit()
         creditInfo.value = res.data || {}
       } catch (error) {
-        console.error('获取积分失败', error)
+        showToast(error?.message || '获取积分失败')
       }
     }
 
+    const switchPhase = (phase) => {
+      if (activePhase.value === phase) return
+      activePhase.value = phase
+      loadActivities()
+    }
+
     const switchType = (type) => {
+      if (activeType.value === type) return
       activeType.value = type
       loadActivities()
     }
@@ -412,59 +414,57 @@ export default {
           showCancelButton: true,
           confirmButtonText: '确认恢复'
         })
-
-        const res = await secondClassApi.restoreIntegrity()
-        if (res.code === 200) {
-          showToast({
-            message: '恢复成功！',
-            icon: 'success'
-          })
-          loadCredit()
-        } else {
-          showToast({
-            message: res.message || '恢复失败',
-            icon: 'fail'
-          })
-        }
+      } catch (e) {
+        return
+      }
+      try {
+        await secondClassApi.restoreIntegrity()
+        showToast({ message: '恢复成功！诚信值 +1', icon: 'success' })
+        loadCredit()
       } catch (error) {
-        if (error) {
-          showToast(error.message || '恢复失败')
-        }
+        showToast(error?.message || '恢复失败')
       }
     }
 
-    const onStartTimeConfirm = (value) => {
-      publishForm.value.startTime = formatDateTime(value)
-      showStartTimePicker.value = false
-    }
-
-    const onEndTimeConfirm = (value) => {
-      publishForm.value.endTime = formatDateTime(value)
-      showEndTimePicker.value = false
-    }
-
-    const formatDateTime = (date) => {
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:00`
+    const openPublish = () => {
+      publishForm.value = {
+        activityName: '',
+        description: '',
+        location: '',
+        score: '',
+        maxParticipants: '',
+        startTime: '',
+        endTime: '',
+        activityType: 1
+      }
+      showPublishDialog.value = true
     }
 
     const handlePublish = async () => {
+      if (publishing.value) return
+      if (!publishForm.value.startTime || !publishForm.value.endTime) {
+        showToast('请选择开始和结束时间')
+        return
+      }
+      publishing.value = true
       try {
-        const res = await secondClassApi.publishActivity(publishForm.value)
-        if (res.code === 200) {
-          showToast({
-            message: '发布成功！',
-            icon: 'success'
-          })
-          showPublishDialog.value = false
-          loadActivities()
-        } else {
-          showToast({
-            message: res.message || '发布失败',
-            icon: 'fail'
-          })
-        }
+        await secondClassApi.publishActivity({
+          activityName: publishForm.value.activityName,
+          description: publishForm.value.description,
+          location: publishForm.value.location,
+          score: publishForm.value.score,
+          maxParticipants: publishForm.value.maxParticipants,
+          startTime: publishForm.value.startTime,
+          endTime: publishForm.value.endTime,
+          activityType: publishForm.value.activityType
+        })
+        showToast({ message: '发布成功！', icon: 'success' })
+        showPublishDialog.value = false
+        loadActivities()
       } catch (error) {
-        showToast(error.message || '发布失败')
+        showToast(error?.message || '发布失败')
+      } finally {
+        publishing.value = false
       }
     }
 
@@ -483,36 +483,33 @@ export default {
     onMounted(() => {
       loadActivities()
       loadCredit()
+      loadJoinedCount()
     })
 
     return {
       activities,
-      defaultCover: DEFAULT_COVER,
-      activityCover,
-      activePhase,
-      phaseTabs,
-      joinedCount,
-      switchPhase,
       creditInfo,
       activeType,
+      activePhase,
+      joinedCount,
+      loading,
+      publishing,
       showPublishDialog,
-      showStartTimePicker,
-      showEndTimePicker,
-      startTimeValue,
-      endTimeValue,
+      phaseTabs,
       publishForm,
-      isAdmin,
       canPublish,
       progressPercent,
+      emptyText,
       activityTypes,
+      activityCover,
       getStatusClass,
       getStatusText,
       getTypeName,
       formatDate,
+      switchPhase,
       switchType,
       handleRestoreIntegrity,
-      onStartTimeConfirm,
-      onEndTimeConfirm,
+      openPublish,
       handlePublish,
       goToDetail,
       navigateTo,
@@ -523,33 +520,22 @@ export default {
 </script>
 
 <style scoped>
-.second-class-container {
+.second-class-page {
   min-height: 100vh;
-  background: #f5f7fa;
-  padding-bottom: 80px;
+  background: var(--bg-page);
+  padding-bottom: 90px;
 }
 
-/* 积分卡片 */
 .credit-card {
-  position: relative;
-  margin: 15px;
-  border-radius: 16px;
+  margin: 16px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
-}
-
-.credit-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
+  box-shadow: 0 12px 32px rgba(44, 82, 130, 0.28);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
 }
 
 .credit-content {
-  position: relative;
-  padding: 20px;
+  padding: 22px 20px;
   color: #fff;
 }
 
@@ -568,19 +554,20 @@ export default {
 
 .credit-value {
   font-size: 32px;
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: 4px;
+  line-height: 1.2;
 }
 
 .credit-label {
-  font-size: 13px;
-  opacity: 0.9;
+  font-size: var(--font-sm);
+  opacity: 0.88;
 }
 
 .credit-divider {
   width: 1px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .credit-progress {
@@ -590,146 +577,195 @@ export default {
 .progress-header {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: var(--font-xs);
   margin-bottom: 8px;
+  opacity: 0.9;
 }
 
 .progress-bar {
   height: 8px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-full);
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: #fff;
-  border-radius: 4px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--accent), #e0b44a);
+  box-shadow: 0 0 10px rgba(214, 158, 46, 0.5);
   transition: width 0.5s ease;
+}
+
+.progress-fill.done {
+  background: linear-gradient(90deg, var(--success), #4cc98a);
+  box-shadow: 0 0 10px rgba(47, 158, 110, 0.5);
 }
 
 .credit-status {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-.integrity-tag {
-  margin-left: auto;
-}
-
-/* 诚信值恢复提示 */
 .restore-section {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff3e0;
-  margin: 0 15px 15px;
-  padding: 12px 15px;
-  border-radius: 12px;
-  border-left: 4px solid #ff9800;
+  gap: 12px;
+  background: var(--danger-soft);
+  margin: 0 16px 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--danger);
 }
 
 .restore-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: #e65100;
+  font-size: var(--font-sm);
+  color: var(--danger);
+  font-weight: 600;
 }
 
-/* 证书申请横幅 */
-.cert-banner {
+.banner-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  margin: 0 15px 15px;
-  padding: 15px;
-  border-radius: 12px;
-  border-left: 4px solid #f59e0b;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  margin: 0 16px 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.cert-banner:active {
+.banner-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.banner-card:active {
   transform: scale(0.98);
 }
 
-.cert-banner-left {
+.banner-card.gold {
+  background: linear-gradient(135deg, var(--accent-soft), #fdf6e3);
+  border-color: #f0e2b8;
+}
+
+.banner-left {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.cert-banner-left h4 {
-  font-size: 15px;
-  font-weight: 600;
-  color: #92400e;
+.banner-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.banner-icon.gold-bg {
+  background: rgba(214, 158, 46, 0.18);
+}
+
+.banner-icon.blue-bg {
+  background: var(--primary-soft);
+}
+
+.banner-left h4 {
+  font-size: var(--font-md);
+  font-weight: 700;
+  color: var(--text-primary);
   margin-bottom: 2px;
 }
 
-.cert-banner-left p {
-  font-size: 12px;
-  color: #b45309;
+.banner-left p {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
 }
 
-.cert-banner-right {
+.banner-right {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #92400e;
 }
 
-.cert-score-badge {
-  background: #f59e0b;
+.banner-badge {
+  background: var(--accent);
   color: #fff;
-  font-size: 12px;
+  font-size: var(--font-xs);
   padding: 4px 10px;
-  border-radius: 15px;
-  font-weight: 600;
+  border-radius: var(--radius-full);
+  font-weight: 700;
 }
 
-/* 分类标签 */
 .phase-tabs {
   display: flex;
   gap: 8px;
-  padding: 12px 12px 0;
+  padding: 8px 16px 0;
   overflow-x: auto;
 }
+
+.phase-tabs::-webkit-scrollbar {
+  display: none;
+}
+
 .phase-tab {
   flex-shrink: 0;
   padding: 8px 16px;
-  border-radius: 999px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  color: #4a5568;
-  font-size: 13px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
+
 .phase-tab.active {
-  background: #2c5282;
-  border-color: #2c5282;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 6px 14px rgba(44, 82, 130, 0.22);
 }
+
 .phase-tab .badge {
   margin-left: 4px;
-  background: #d69e2e;
-  color: #1a202c;
+  background: var(--accent);
+  color: #fff;
   font-size: 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 1px 6px;
+  font-weight: 700;
 }
+
+.phase-tab.active .badge {
+  background: rgba(255, 255, 255, 0.28);
+}
+
 .category-section {
-  background: #fff;
+  background: var(--bg-card);
   padding: 12px 0;
-  margin-bottom: 8px;
+  margin: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .category-scroll {
   display: flex;
-  padding: 0 15px;
+  padding: 0 14px;
   overflow-x: auto;
-  gap: 10px;
+  gap: 8px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -739,36 +775,43 @@ export default {
 
 .category-tag {
   flex-shrink: 0;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  color: #666;
-  background: #f5f5f5;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-muted);
+  border: 1px solid var(--border-color);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 .category-tag.active {
-  background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
   color: #fff;
+  border-color: transparent;
 }
 
-/* 活动列表 */
 .activity-list {
-  padding: 0 15px;
+  padding: 0 16px;
 }
 
 .activity-card {
-  background: #fff;
-  border-radius: 12px;
-  margin-bottom: 15px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  margin-bottom: 14px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.activity-card:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .activity-card:active {
@@ -783,12 +826,12 @@ export default {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #ffd700;
+  background: rgba(20, 36, 58, 0.72);
+  color: #f6e05e;
   padding: 4px 10px;
-  border-radius: 15px;
-  font-size: 13px;
-  font-weight: 600;
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -799,39 +842,41 @@ export default {
   bottom: 10px;
   left: 10px;
   padding: 4px 10px;
-  border-radius: 15px;
-  font-size: 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: 700;
 }
 
 .status-upcoming {
-  background: #e8f4ff;
-  color: #1989fa;
+  background: var(--info-soft);
+  color: var(--info);
 }
 
 .status-ongoing {
-  background: #e8f8ef;
-  color: #07c160;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .status-ended {
-  background: #f5f5f5;
-  color: #999;
+  background: var(--bg-muted);
+  color: var(--text-secondary);
 }
 
 .status-cancelled {
-  background: #fee2e2;
-  color: #ef4444;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .activity-info {
-  padding: 15px;
+  padding: 14px 16px;
 }
 
 .activity-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--text-primary);
   margin-bottom: 10px;
+  line-height: 1.4;
 }
 
 .activity-meta {
@@ -845,60 +890,108 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  color: #666;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
 }
 
 .activity-tags {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-.type-tag {
-  font-size: 11px;
-  padding: 3px 10px;
-  background: #f0f7ff;
-  color: #1989fa;
-  border-radius: 15px;
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 36px;
 }
 
-/* 发布按钮 */
-.publish-btn {
+.fab {
   position: fixed;
-  bottom: 80px;
+  bottom: 88px;
   right: 20px;
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
-  border-radius: 50%;
+  width: 54px;
+  height: 54px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 20px rgba(44, 82, 130, 0.32);
   cursor: pointer;
   z-index: 100;
+  transition: transform 0.15s ease;
 }
 
-/* 发布表单 */
+.fab:active {
+  transform: scale(0.94);
+}
+
 .publish-form {
   padding: 20px;
   height: 100%;
   overflow-y: auto;
+  background: var(--bg-page);
 }
 
 .form-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  padding: 0 4px;
 }
 
 .form-header h3 {
-  font-size: 18px;
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.publish-form :deep(.van-cell-group) {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.type-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.type-chip {
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
   font-weight: 600;
+  background: var(--bg-muted);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.type-chip.active {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .form-actions {
   margin-top: 20px;
+  padding-bottom: 24px;
+}
+
+.native-date-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--font-md);
+  color: var(--text-primary);
+  font-family: inherit;
+  min-height: 24px;
 }
 </style>

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="profile-container">
     <!-- 用户信息头部 -->
     <div class="profile-header">
@@ -21,8 +21,8 @@
               {{ user.username || '未登录' }}
               <span class="role-tag" :class="roleClass">{{ roleText }}</span>
             </h3>
-            <p class="student-id">学号：{{ user.studentId }}</p>
-            <p class="college">{{ user.college }} · {{ user.major }}</p>
+            <p class="student-id">学号：{{ user.studentId || '—' }}</p>
+            <p class="college">{{ user.college || '未填写学院' }} · {{ user.major || '未填写专业' }}</p>
           </div>
         </div>
         <van-button type="primary" size="small" round @click="goToEdit" class="edit-btn">
@@ -33,22 +33,22 @@
       <!-- 学习统计 -->
       <div class="stats-card">
         <div class="stat-item">
-          <span class="stat-value">{{ userGPA }}</span>
+          <span class="stat-value">{{ loadingStats ? '—' : userGPA }}</span>
           <span class="stat-label">绩点</span>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
-          <span class="stat-value">{{ totalCredits }}</span>
+          <span class="stat-value">{{ loadingStats ? '—' : totalCredits }}</span>
           <span class="stat-label">学分</span>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
-          <span class="stat-value">{{ borrowCount }}</span>
+          <span class="stat-value">{{ loadingStats ? '—' : borrowCount }}</span>
           <span class="stat-label">在借</span>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
-          <span class="stat-value">{{ courseCount }}</span>
+          <span class="stat-value">{{ loadingStats ? '—' : courseCount }}</span>
           <span class="stat-label">课程</span>
         </div>
       </div>
@@ -56,7 +56,7 @@
 
     <!-- 功能菜单 -->
     <div class="menu-section">
-      <div class="section-title">学习服务</div>
+      <div class="menu-title">学习服务</div>
       <van-cell-group :border="false">
         <van-cell
           title="我的课程表"
@@ -98,7 +98,7 @@
     </div>
 
     <div class="menu-section">
-      <div class="section-title">校园生活</div>
+      <div class="menu-title">校园生活</div>
       <van-cell-group :border="false">
         <van-cell
           title="校园资讯"
@@ -137,7 +137,7 @@
     </div>
 
     <div class="menu-section">
-      <div class="section-title">权限说明</div>
+      <div class="menu-title">权限说明</div>
       <div class="perm-box">
         <template v-if="isAdmin">
           <p class="perm-tip">管理员拥有全部修改权：用户管理、成绩录入、内容审核、证书审批等。</p>
@@ -177,7 +177,7 @@
     </div>
 
     <div class="menu-section">
-      <div class="section-title">账号设置</div>
+      <div class="menu-title">账号设置</div>
       <van-cell-group :border="false">
         <van-cell
           title="消息通知"
@@ -201,6 +201,7 @@
             </div>
           </template>
         </van-cell>
+        <!-- 管理员菜单：仅 role=2 显示 -->
         <van-cell
           v-if="isAdmin"
           title="用户管理"
@@ -238,6 +239,17 @@
           </template>
         </van-cell>
         <van-cell
+          title="编辑资料"
+          is-link
+          @click="goToEdit"
+        >
+          <template #icon>
+            <div class="cell-icon icon-green">
+              <van-icon name="user-circle-o" size="18" />
+            </div>
+          </template>
+        </van-cell>
+        <van-cell
           title="修改密码"
           is-link
           @click="navigateTo('/profile/password')"
@@ -269,6 +281,7 @@
         round
         plain
         type="danger"
+        :loading="loggingOut"
         @click="handleLogout"
         class="logout-btn"
       >
@@ -302,6 +315,8 @@ export default {
     const totalCredits = ref(0)
     const borrowCount = ref(0)
     const courseCount = ref(0)
+    const loadingStats = ref(true)
+    const loggingOut = ref(false)
 
     const user = computed(() => store.getters.getUser)
 
@@ -314,27 +329,40 @@ export default {
     }
 
     const loadUserStats = async () => {
+      loadingStats.value = true
       try {
-        // 获取GPA
-        const gpaRes = await scoreApi.calculateGPA()
-        if (gpaRes.data) {
-          userGPA.value = gpaRes.data.averageGPA?.toFixed(2) || '0.00'
-          totalCredits.value = gpaRes.data.totalCredits || 0
+        try {
+          const gpaRes = await scoreApi.calculateGPA()
+          if (gpaRes.data) {
+            userGPA.value = gpaRes.data.averageGPA?.toFixed(2) || '0.00'
+            totalCredits.value = gpaRes.data.totalCredits || 0
+          }
+        } catch (error) {
+          showToast('成绩统计加载失败')
         }
 
-        // 获取借阅数量
-        const borrowRes = await bookApi.getBorrowRecords()
-        if (borrowRes.data) {
-          borrowCount.value = borrowRes.data.filter(r => r.status === 1).length
+        try {
+          const borrowRes = await bookApi.getBorrowRecords()
+          if (Array.isArray(borrowRes.data)) {
+            borrowCount.value = borrowRes.data.filter(r => r.status === 1).length
+          } else {
+            borrowCount.value = 0
+          }
+        } catch (error) {
+          showToast('借阅记录加载失败')
+          borrowCount.value = 0
         }
 
-        // 获取课程数量
-        const courseRes = await courseApi.getStudentSchedule({})
-        if (courseRes.data) {
-          courseCount.value = courseRes.data.length
+        try {
+          const courseRes = await courseApi.getStudentSchedule({})
+          if (courseRes.data) {
+            courseCount.value = courseRes.data.length
+          }
+        } catch (error) {
+          showToast('课程数据加载失败')
         }
-      } catch (error) {
-        console.error('获取统计数据失败', error)
+      } finally {
+        loadingStats.value = false
       }
     }
 
@@ -366,8 +394,8 @@ export default {
           const certList = (certRes.data && certRes.data.records) || (Array.isArray(certRes.data) ? certRes.data : [])
           pendingCerts.value = certList.filter(c => c.status === 0)
         }
-      } catch (e) {
-        // ignore
+      } catch (error) {
+        showToast('待审核证书加载失败')
       }
     }
 
@@ -377,27 +405,39 @@ export default {
         showToast(status === 1 ? '证书审核通过' : '已拒绝')
         loadPermissions()
       } catch (error) {
-        showToast(error.message || '操作失败')
+        showToast(error?.message || '操作失败，请稍后重试')
       }
     }
 
     const handleLogout = async () => {
+      if (loggingOut.value) return
       try {
         await showDialog({
           title: '确认退出',
           message: '确定要退出登录吗？退出后需要重新登录。',
           showCancelButton: true,
-          confirmButtonColor: '#ee0a24'
+          confirmButtonColor: '#e24b4b'
         })
+      } catch {
+        // 用户取消
+        return
+      }
 
+      loggingOut.value = true
+      try {
+        // 清除登录态（token + 用户信息）
         store.dispatch('logout')
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
         showToast({
           message: '已退出登录',
           icon: 'success'
         })
-        router.push('/login')
-      } catch {
-        // 取消操作
+        router.replace('/login')
+      } catch (error) {
+        showToast('退出登录失败，请重试')
+      } finally {
+        loggingOut.value = false
       }
     }
 
@@ -413,6 +453,8 @@ export default {
       totalCredits,
       borrowCount,
       courseCount,
+      loadingStats,
+      loggingOut,
       navigateTo,
       isAdmin,
       isMonitor,
@@ -430,99 +472,107 @@ export default {
 </script>
 
 <style scoped>
+.profile-container {
+  min-height: 100vh;
+  background: var(--bg-page);
+  padding-bottom: 32px;
+}
+
 .role-tag {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--font-xs);
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   margin-left: 6px;
   vertical-align: middle;
 }
+
 .role-tag.admin {
-  background: #fef6e4;
-  color: #b7791f;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
+
 .role-tag.monitor {
-  background: #e6fffa;
-  color: #276749;
+  background: var(--success-soft);
+  color: var(--success);
 }
+
 .role-tag.student {
-  background: #e8f0fb;
-  color: #2c5282;
+  background: var(--primary-soft);
+  color: var(--primary);
 }
+
 .perm-box {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--bg-muted);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   padding: 14px;
   margin: 0 12px;
 }
+
 .perm-tip {
-  font-size: 12px;
-  color: #718096;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
   margin-bottom: 10px;
   line-height: 1.6;
 }
+
 .admin-block {
   margin-bottom: 16px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #f0f4f8;
+  border-bottom: 1px solid var(--border-color);
 }
+
 .admin-block h4 {
   font-size: 13px;
-  color: #2c5282;
+  color: var(--primary);
   margin-bottom: 8px;
 }
+
 .active-perms {
   margin-bottom: 10px;
 }
+
 .active-item {
-  font-size: 12px;
-  color: #2f855a;
-  background: #e6fffa;
-  border-radius: 8px;
+  font-size: var(--font-sm);
+  color: var(--success);
+  background: var(--success-soft);
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   margin-bottom: 6px;
 }
+
 .perm-list {
   margin-top: 12px;
-  border-top: 1px solid #f0f4f8;
+  border-top: 1px solid var(--border-color);
   padding-top: 8px;
 }
+
 .perm-item {
   display: flex;
   justify-content: space-between;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid #f5f7fa;
-  font-size: 12px;
-}
-.perm-item p { color: #718096; margin-top: 2px; }
-.perm-item .reason { color: #a0aec0; }
-.perm-actions { display: flex; flex-direction: column; gap: 6px; }
-.perm-picker { padding: 16px; }
-.picker-title {
-  text-align: center;
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: #2c5282;
-}
-.picker-option {
-  padding: 14px;
-  border-radius: 10px;
-  text-align: center;
-  background: #f7fafc;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-.picker-option:active { background: #e8f0fb; }
-.profile-container {
-  min-height: 100vh;
-  background: #f5f7fa;
-  padding-bottom: 60px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-sm);
 }
 
-/* 头部区域 */
+.perm-item p {
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.perm-item .reason {
+  color: var(--text-muted);
+}
+
+.perm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .profile-header {
   position: relative;
   padding-bottom: 20px;
@@ -534,8 +584,8 @@ export default {
   left: 0;
   right: 0;
   height: 180px;
-  background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
-  border-radius: 0 0 30px 30px;
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .header-content {
@@ -563,22 +613,22 @@ export default {
   right: 0;
   width: 24px;
   height: 24px;
-  background: #2c5282;
+  background: var(--primary);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--text-inverse);
   cursor: pointer;
-  border: 2px solid #fff;
+  border: 2px solid var(--bg-card);
 }
 
 .info {
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .info h3 {
-  font-size: 20px;
+  font-size: var(--font-xl);
   font-weight: 600;
   margin-bottom: 4px;
 }
@@ -590,14 +640,14 @@ export default {
 }
 
 .college {
-  font-size: 12px;
-  opacity: 0.8;
+  font-size: var(--font-sm);
+  opacity: 0.85;
 }
 
 .edit-btn {
   background: rgba(255, 255, 255, 0.2) !important;
   border: 1px solid rgba(255, 255, 255, 0.5) !important;
-  color: #fff !important;
+  color: var(--text-inverse) !important;
 }
 
 /* 统计卡片 */
@@ -607,11 +657,12 @@ export default {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background: #fff;
+  background: var(--bg-card);
   margin: 0 20px;
   padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-item {
@@ -621,82 +672,88 @@ export default {
 }
 
 .stat-value {
-  font-size: 22px;
+  font-size: var(--font-xl);
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 
 .stat-label {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
 }
 
 .stat-divider {
   width: 1px;
   height: 30px;
-  background: #eee;
+  background: var(--border-color);
 }
 
 /* 菜单区域 */
 .menu-section {
-  margin: 15px;
-  background: #fff;
-  border-radius: 15px;
+  margin: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 15px 0;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
-.section-title {
-  font-size: 13px;
-  color: #999;
+.menu-title {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-muted);
   padding: 0 20px 10px;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--border-color);
   margin-bottom: 5px;
 }
 
 .cell-icon {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--text-inverse);
   margin-right: 10px;
 }
 
 .icon-blue {
-  background: linear-gradient(135deg, #2c5282 0%, #4299e1 100%);
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary-light));
 }
 
 .icon-green {
-  background: linear-gradient(135deg, #276749 0%, #38a169 100%);
+  background: linear-gradient(135deg, var(--success), #38a169);
 }
 
 .icon-orange {
-  background: linear-gradient(135deg, #975a16 0%, #d69e2e 100%);
+  background: linear-gradient(135deg, var(--accent), #e0b44a);
 }
 
 .icon-purple {
-  background: linear-gradient(135deg, #553c9a 0%, #805ad5 100%);
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
 }
 
 .icon-red {
-  background: linear-gradient(135deg, #9b2c2c 0%, #e53e3e 100%);
+  background: linear-gradient(135deg, var(--danger), #e53e3e);
 }
 
 .icon-teal {
-  background: linear-gradient(135deg, #234e52 0%, #319795 100%);
+  background: linear-gradient(135deg, var(--info), #319795);
 }
 
 .icon-gray {
-  background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+  background: linear-gradient(135deg, var(--text-secondary), var(--text-muted));
+}
+
+.icon-gold {
+  background: linear-gradient(135deg, var(--accent), #e0b44a);
 }
 
 /* 退出登录 */
 .logout-section {
-  margin: 20px 15px;
+  margin: 20px 16px;
 }
 
 .logout-btn {
@@ -708,11 +765,31 @@ export default {
 .version-info {
   text-align: center;
   padding: 20px;
-  color: #ccc;
-  font-size: 12px;
+  color: var(--text-muted);
+  font-size: var(--font-sm);
 }
 
 .version-info p {
   margin-bottom: 4px;
+}
+
+@media (min-width: 900px) {
+  .profile-container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+  }
+
+  .header-content {
+    padding: 32px 28px 20px;
+  }
+
+  .stats-card {
+    margin: 0 28px;
+  }
+
+  .menu-section {
+    margin: 16px 24px;
+  }
 }
 </style>

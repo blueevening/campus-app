@@ -1,100 +1,108 @@
 <template>
-  <div class="certificate-container">
+  <div class="page">
     <van-nav-bar title="证书申请" left-arrow @click-left="goBack">
       <template #right>
-        <van-icon name="records" size="20" @click="navigateTo('/certificate/my')" />
+        <van-icon name="records" size="20" color="#2c5282" @click="navigateTo('/certificate/my')" />
       </template>
     </van-nav-bar>
 
-    <!-- 积分说明 -->
-    <div class="score-info">
-      <div class="info-header">
-        <van-icon name="info-o" />
-        <span>证书积分说明</span>
-      </div>
-      <div class="level-list">
-        <div class="level-item" v-for="level in levels" :key="level.value">
-          <div class="level-badge" :class="'level-' + level.value">
-            {{ level.label }}
-          </div>
-          <div class="level-info">
-            <span class="level-score">+{{ level.score }}分</span>
-            <span class="level-desc">{{ level.description }}</span>
+    <div class="apply-body">
+      <div class="score-info page-card">
+        <div class="section-title">证书积分说明</div>
+        <div v-if="levelsLoading" class="loading-box">
+          <van-loading type="spinner" color="#2c5282">加载中...</van-loading>
+        </div>
+        <van-empty v-else-if="!levels.length" description="暂无等级配置" />
+        <div v-else class="level-list">
+          <div class="level-item" v-for="level in levels" :key="level.value">
+            <div class="level-badge" :class="'level-' + level.value">
+              {{ level.label }}
+            </div>
+            <div class="level-info">
+              <span class="level-score">+{{ level.score }}分</span>
+              <span class="level-desc">{{ level.description }}</span>
+            </div>
           </div>
         </div>
+      </div>
+
+      <div class="form-section page-card">
+        <div class="section-title">填写申请</div>
+        <van-form @submit="handleSubmit">
+          <van-cell-group inset>
+            <van-field
+              v-model="form.certificateName"
+              label="证书名称"
+              placeholder="请输入证书名称"
+              required
+              :rules="[{ required: true, message: '请输入证书名称' }]"
+            />
+
+            <van-field
+              label="证书等级"
+              required
+              :value="levelDisplay"
+              placeholder="请选择证书等级"
+              readonly
+              is-link
+              clickable
+              @click="showLevelPicker = true"
+            />
+
+            <van-field
+              label="证书类型"
+              required
+              :value="typeName"
+              placeholder="请选择证书类型"
+              readonly
+              is-link
+              clickable
+              @click="showTypePicker = true"
+            />
+
+            <van-field
+              v-model="form.issuer"
+              label="颁发机构"
+              placeholder="请输入颁发机构"
+              required
+              :rules="[{ required: true, message: '请输入颁发机构' }]"
+            />
+
+            <van-field label="获得时间" required :rules="[{ required: true, message: '请选择获得时间' }]">
+              <template #input>
+                <input
+                  v-model="form.obtainDate"
+                  class="native-date-input"
+                  type="date"
+                  min="2020-01-01"
+                  :max="today"
+                />
+              </template>
+            </van-field>
+          </van-cell-group>
+
+          <div class="score-preview" v-if="form.level">
+            <div class="preview-label">预计获得积分</div>
+            <div class="preview-value">+{{ getLevelScore(form.level) }}分</div>
+            <div class="preview-hint">提交后进入待审核，审核通过即可获得积分</div>
+          </div>
+
+          <div class="form-actions">
+            <van-button
+              round
+              block
+              type="primary"
+              native-type="submit"
+              :loading="submitting"
+              loading-text="提交中..."
+            >
+              提交申请
+            </van-button>
+          </div>
+        </van-form>
       </div>
     </div>
 
-    <!-- 申请表单 -->
-    <div class="form-section">
-      <van-form @submit="handleSubmit">
-        <van-cell-group>
-          <van-field
-            v-model="form.certificateName"
-            label="证书名称"
-            placeholder="请输入证书名称"
-            required
-            :rules="[{ required: true, message: '请输入证书名称' }]"
-          />
-
-          <van-field
-            label="证书等级"
-            required
-            :value="getLevelName(form.level)"
-            placeholder="请选择证书等级"
-            readonly
-            is-link
-            @click="showLevelPicker = true"
-            @click-input="showLevelPicker = true"
-            clickable
-          />
-
-          <van-field
-            label="证书类型"
-            required
-            :value="getTypeName(form.certificateType)"
-            placeholder="请选择证书类型"
-            readonly
-            is-link
-            @click="showTypePicker = true"
-            @click-input="showTypePicker = true"
-            clickable
-          />
-
-          <van-field
-            v-model="form.issuer"
-            label="颁发机构"
-            placeholder="请输入颁发机构"
-            required
-          />
-
-          <van-field label="获得时间" required :rules="[{ required: true, message: '请选择获得时间' }]">
-            <template #input>
-              <input
-                v-model="form.obtainDate"
-                class="native-date-input"
-                type="date"
-                min="2020-01-01"
-                :max="today"
-              />
-            </template>
-          </van-field>
-        </van-cell-group>
-
-        <div class="score-preview" v-if="form.level">
-          <div class="preview-label">预计获得积分</div>
-          <div class="preview-value">+{{ getLevelScore(form.level) }}分</div>
-        </div>
-
-        <div class="form-actions">
-          <van-button round block type="primary" native-type="submit" :loading="submitting">
-            提交申请
-          </van-button>
-        </div>
-      </van-form>
-    </div>
-
-    <!-- 等级选择器 -->
     <van-popup v-model:show="showLevelPicker" position="bottom" round>
       <div class="picker-content">
         <div class="picker-header">
@@ -108,10 +116,13 @@
             :key="level.value"
             class="picker-item"
             :class="{ active: form.level === level.value }"
-            @click="form.level = level.value; showLevelPicker = false"
+            @click="selectLevel(level)"
           >
             <div class="picker-item-left">
-              <span class="picker-item-name">{{ level.label }}</span>
+              <span class="picker-item-name">
+                <i class="level-dot" :class="'level-' + level.value"></i>
+                {{ level.label }}
+              </span>
               <span class="picker-item-desc">{{ level.description }}</span>
             </div>
             <div class="picker-item-score">+{{ level.score }}分</div>
@@ -120,7 +131,6 @@
       </div>
     </van-popup>
 
-    <!-- 类型选择器 -->
     <van-popup v-model:show="showTypePicker" position="bottom" round>
       <div class="picker-content">
         <div class="picker-header">
@@ -134,9 +144,9 @@
             :key="type.value"
             class="picker-item"
             :class="{ active: form.certificateType === type.value }"
-            @click="form.certificateType = type.value; showTypePicker = false"
+            @click="selectType(type)"
           >
-            <span>{{ type.label }}</span>
+            <span class="picker-item-name">{{ type.label }}</span>
           </div>
         </div>
       </div>
@@ -145,7 +155,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { certificateApi } from '../api'
@@ -155,6 +165,7 @@ export default {
   setup() {
     const router = useRouter()
     const submitting = ref(false)
+    const levelsLoading = ref(true)
     const showLevelPicker = ref(false)
     const showTypePicker = ref(false)
     const today = new Date().toISOString().slice(0, 10)
@@ -169,22 +180,34 @@ export default {
       obtainDate: ''
     })
 
-    const getLevelName = (level) => {
-      const found = levels.value.find(l => l.value === level)
-      return found ? found.label : ''
-    }
+    const levelDisplay = computed(() => {
+      const found = levels.value.find((l) => l.value === form.value.level)
+      if (!found) return ''
+      return `${found.label}（+${found.score}分）`
+    })
 
-    const getTypeName = (type) => {
-      const found = types.value.find(t => t.value === type)
+    const typeName = computed(() => {
+      const found = types.value.find((t) => t.value === form.value.certificateType)
       return found ? found.label : ''
-    }
+    })
 
     const getLevelScore = (level) => {
-      const found = levels.value.find(l => l.value === level)
+      const found = levels.value.find((l) => l.value === level)
       return found ? found.score : 0
     }
 
+    const selectLevel = (level) => {
+      form.value.level = level.value
+      showLevelPicker.value = false
+    }
+
+    const selectType = (type) => {
+      form.value.certificateType = type.value
+      showTypePicker.value = false
+    }
+
     const loadData = async () => {
+      levelsLoading.value = true
       try {
         const [levelsRes, typesRes] = await Promise.all([
           certificateApi.getLevels(),
@@ -193,7 +216,9 @@ export default {
         levels.value = levelsRes.data || []
         types.value = typesRes.data || []
       } catch (error) {
-        console.error('加载数据失败', error)
+        showToast(error.message || '加载等级配置失败')
+      } finally {
+        levelsLoading.value = false
       }
     }
 
@@ -217,21 +242,20 @@ export default {
 
       submitting.value = true
       try {
-        const res = await certificateApi.apply(form.value)
-        if (res.code === 200) {
-          showToast({
-            message: '申请成功！',
-            icon: 'success'
-          })
-          setTimeout(() => {
-            router.back()
-          }, 1500)
-        } else {
-          showToast({
-            message: res.message || '申请失败',
-            icon: 'fail'
-          })
-        }
+        await certificateApi.apply({
+          certificateName: form.value.certificateName,
+          level: form.value.level,
+          certificateType: form.value.certificateType,
+          issuer: form.value.issuer,
+          obtainDate: form.value.obtainDate
+        })
+        showToast({
+          message: '申请已提交，进入待审核',
+          icon: 'success'
+        })
+        setTimeout(() => {
+          router.replace('/certificate/my')
+        }, 800)
       } catch (error) {
         showToast(error.message || '申请失败')
       } finally {
@@ -247,21 +271,22 @@ export default {
       router.back()
     }
 
-    onMounted(() => {
-      loadData()
-    })
+    onMounted(loadData)
 
     return {
       form,
       levels,
       types,
       submitting,
+      levelsLoading,
       showLevelPicker,
       showTypePicker,
       today,
-      getLevelName,
-      getTypeName,
+      levelDisplay,
+      typeName,
       getLevelScore,
+      selectLevel,
+      selectType,
       handleSubmit,
       navigateTo,
       goBack
@@ -276,90 +301,75 @@ export default {
   border: none;
   outline: none;
   background: transparent;
-  font-size: 14px;
-  color: #323233;
+  font-size: var(--font-md);
+  color: var(--text-primary);
   font-family: inherit;
   min-height: 24px;
 }
-.certificate-container {
-  min-height: 100vh;
-  background: #f5f7fa;
-  padding-bottom: 30px;
+
+.apply-body {
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-3);
 }
 
-.score-info {
-  background: #fff;
-  margin: 15px;
-  border-radius: 12px;
-  padding: 15px;
-}
-
-.info-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 15px;
-}
-
-.info-header .van-icon {
-  color: #2c5282;
+.score-info,
+.form-section {
+  padding: var(--space-4);
 }
 
 .level-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 .level-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-muted);
+  border-radius: var(--radius-md);
 }
 
 .level-badge {
   padding: 4px 10px;
-  border-radius: 15px;
-  font-size: 12px;
-  font-weight: 600;
-  min-width: 50px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: 700;
+  min-width: 52px;
   text-align: center;
 }
 
 .level-1 {
-  background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
-  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #e0b44a);
+  color: #1a202c;
 }
 
 .level-2 {
-  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: var(--text-inverse);
 }
 
 .level-3 {
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-  color: #fff;
+  background: var(--info-soft);
+  color: var(--info);
 }
 
 .level-4 {
-  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-  color: #fff;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .level-5 {
-  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-  color: #fff;
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 .level-6 {
-  background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
-  color: #fff;
+  background: var(--border-color);
+  color: var(--text-secondary);
 }
 
 .level-info {
@@ -367,36 +377,35 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-2);
 }
 
 .level-score {
-  font-size: 16px;
+  font-size: var(--font-lg);
   font-weight: 700;
-  color: #f59e0b;
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 .level-desc {
-  font-size: 12px;
-  color: #999;
-}
-
-.form-section {
-  margin: 15px;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  text-align: right;
 }
 
 .score-preview {
-  background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
-  margin: 20px 0;
-  padding: 20px;
-  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  margin: var(--space-5) 0 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
   text-align: center;
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .preview-label {
-  font-size: 14px;
+  font-size: var(--font-md);
   opacity: 0.9;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .preview-value {
@@ -404,34 +413,41 @@ export default {
   font-weight: 700;
 }
 
-.form-actions {
-  margin-top: 30px;
+.preview-hint {
+  margin-top: var(--space-2);
+  font-size: var(--font-xs);
+  opacity: 0.8;
 }
 
-/* 选择器样式 */
+.form-actions {
+  margin-top: var(--space-5);
+  padding-bottom: var(--space-2);
+}
+
 .picker-content {
-  padding: 15px;
+  padding: var(--space-3);
 }
 
 .picker-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #f0f0f0;
-  margin-bottom: 15px;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--space-3);
 }
 
 .picker-header span {
-  font-size: 14px;
-  color: #2c5282;
+  font-size: var(--font-md);
+  color: var(--primary);
   cursor: pointer;
+  font-weight: 600;
 }
 
 .picker-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333 !important;
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--text-primary) !important;
 }
 
 .picker-list {
@@ -443,18 +459,18 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px;
-  border-radius: 8px;
+  padding: var(--space-4) var(--space-3);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: background 0.2s ease;
 }
 
 .picker-item:hover {
-  background: #f5f7fa;
+  background: var(--bg-muted);
 }
 
 .picker-item.active {
-  background: #e8f4ff;
+  background: var(--primary-soft);
 }
 
 .picker-item-left {
@@ -464,19 +480,42 @@ export default {
 }
 
 .picker-item-name {
-  font-size: 15px;
-  font-weight: 500;
-  color: #333;
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
+.level-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.level-dot.level-1 { background: var(--accent); }
+.level-dot.level-2 { background: var(--primary); }
+.level-dot.level-3 { background: var(--info); }
+.level-dot.level-4 { background: var(--success); }
+.level-dot.level-5 { background: var(--primary-light); }
+.level-dot.level-6 { background: var(--text-muted); }
+
 .picker-item-desc {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
 }
 
 .picker-item-score {
-  font-size: 16px;
-  font-weight: 600;
-  color: #f59e0b;
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.loading-box {
+  padding: var(--space-6);
+  display: flex;
+  justify-content: center;
 }
 </style>

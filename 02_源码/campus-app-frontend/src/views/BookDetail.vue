@@ -1,18 +1,16 @@
 <template>
-  <div class="book-detail-container">
+  <div class="page book-detail-page">
     <van-nav-bar title="图书详情" left-arrow @click-left="goBack">
       <template #right>
-        <van-icon name="share-o" size="20" @click="showShareTip" />
+        <van-icon name="share-o" size="20" color="var(--primary)" @click="showShareTip" />
       </template>
     </van-nav-bar>
 
-    <!-- 加载中 -->
-    <div v-if="loading" class="loading-section">
-      <van-loading type="spinner" color="#2c5282">加载中...</van-loading>
+    <div v-if="loading" class="loading-wrap">
+      <van-loading type="spinner" color="var(--primary)">加载图书详情...</van-loading>
     </div>
 
     <template v-else-if="book">
-      <!-- 图书封面和基本信息 -->
       <div class="book-header">
         <div class="book-cover-wrapper">
           <van-image
@@ -23,7 +21,6 @@
             radius="10"
             class="book-cover"
           />
-          <div class="cover-shadow"></div>
         </div>
         <div class="book-basic">
           <h2 class="book-title">{{ book.bookName }}</h2>
@@ -46,8 +43,8 @@
             </div>
           </div>
           <div class="book-tags">
-            <span class="tag category-tag">{{ book.category }}</span>
-            <span class="tag location-tag">
+            <span class="tag tag-blue">{{ book.category }}</span>
+            <span class="tag tag-gold">
               <van-icon name="location-o" />
               {{ book.location }}
             </span>
@@ -55,12 +52,11 @@
         </div>
       </div>
 
-      <!-- 库存信息 -->
       <div class="stock-section">
         <div class="stock-header">
           <span class="stock-title">库存状态</span>
-          <span class="stock-status" :class="book.availableCopies > 0 ? 'available' : 'empty'">
-            {{ book.availableCopies > 0 ? '可借阅' : '暂无库存' }}
+          <span class="tag" :class="isAvailable ? 'tag-green' : 'tag-red'">
+            {{ isAvailable ? '可借阅' : '暂无库存' }}
           </span>
         </div>
         <div class="stock-bar">
@@ -71,12 +67,11 @@
           ></div>
         </div>
         <div class="stock-info">
-          <span>可借：{{ book.availableCopies }} 本</span>
-          <span>馆藏：{{ book.totalCopies }} 本</span>
+          <span>可借：{{ book.availableCopies ?? 0 }} 本</span>
+          <span>馆藏：{{ book.totalCopies ?? 0 }} 本</span>
         </div>
       </div>
 
-      <!-- 图书简介 -->
       <div class="section">
         <div class="section-header">
           <van-icon name="description" />
@@ -89,7 +84,6 @@
         </div>
       </div>
 
-      <!-- 借阅须知 -->
       <div class="section">
         <div class="section-header">
           <van-icon name="info-o" />
@@ -98,26 +92,25 @@
         <div class="section-content">
           <div class="notice-list">
             <div class="notice-item">
-              <van-icon name="clock-o" color="#1989fa" />
+              <van-icon name="clock-o" color="var(--primary-light)" />
               <span>借阅期限：30天</span>
             </div>
             <div class="notice-item">
-              <van-icon name="replay" color="#07c160" />
+              <van-icon name="replay" color="var(--success)" />
               <span>最多续借2次，每次延长15天</span>
             </div>
             <div class="notice-item">
-              <van-icon name="warning-o" color="#ff976a" />
+              <van-icon name="warning-o" color="var(--accent)" />
               <span>每人最多同时借阅5本</span>
             </div>
             <div class="notice-item">
-              <van-icon name="close" color="#ee0a24" />
+              <van-icon name="close" color="var(--danger)" />
               <span>逾期未还将影响借阅权限</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 底部操作栏 -->
       <div class="bottom-bar">
         <div class="bar-left">
           <div class="bar-icon" @click="showToast('已收藏')">
@@ -131,7 +124,7 @@
         </div>
         <div class="bar-right">
           <van-button
-            v-if="book.availableCopies > 0"
+            v-if="isAvailable"
             type="primary"
             round
             block
@@ -144,22 +137,31 @@
             立即借阅
           </van-button>
           <van-button
-            v-else
-            type="warning"
+            v-else-if="!reserved"
             round
             block
-            class="borrow-btn"
+            class="borrow-btn reserve-btn"
             :loading="borrowing"
             @click="handleReserve"
           >
             预约到馆通知
           </van-button>
+          <van-button
+            v-else
+            round
+            block
+            disabled
+            class="borrow-btn reserved-btn"
+          >
+            已预约
+          </van-button>
         </div>
       </div>
     </template>
 
-    <!-- 空状态 -->
-    <van-empty v-else description="图书不存在" />
+    <van-empty v-else description="图书不存在">
+      <van-button round type="primary" size="small" @click="goBack">返回</van-button>
+    </van-empty>
   </div>
 </template>
 
@@ -168,7 +170,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast, showDialog } from 'vant'
 import { bookApi } from '../api'
-import { bookCover as getDefaultCover, coverByBook } from '../utils/mediaDefaults'
+import { coverByBook } from '../utils/mediaDefaults'
 
 export default {
   name: 'BookDetail',
@@ -178,13 +180,19 @@ export default {
     const book = ref(null)
     const loading = ref(true)
     const borrowing = ref(false)
+    const reserved = ref(false)
+
+    const isAvailable = computed(() => {
+      return book.value && Number(book.value.availableCopies) > 0
+    })
 
     const stockPercent = computed(() => {
       if (!book.value) return 0
-      return (book.value.availableCopies / book.value.totalCopies * 100)
+      const totalCopies = Number(book.value.totalCopies) || 0
+      const available = Number(book.value.availableCopies) || 0
+      if (totalCopies <= 0) return 0
+      return Math.min(100, Math.round((available / totalCopies) * 100))
     })
-
-    const getDefaultCoverCategory = getDefaultCover
 
     const loadBookDetail = async () => {
       loading.value = true
@@ -192,21 +200,25 @@ export default {
         const bookId = route.params.id
         const res = await bookApi.getBookDetail(bookId)
         book.value = res.data
+        if (book.value && Number(book.value.availableCopies) > 0) {
+          reserved.value = false
+        }
       } catch (error) {
-        showToast('获取图书详情失败')
+        showToast(error?.message || '获取图书详情失败')
       } finally {
         loading.value = false
       }
     }
 
     const handleBorrow = async () => {
+      if (!book.value || borrowing.value) return
       try {
         await showDialog({
           title: '确认借阅',
           message: `确定要借阅《${book.value.bookName}》吗？\n\n借阅期限：30天\n请按时归还，逾期将影响借阅权限。`,
           showCancelButton: true,
           confirmButtonText: '确认借阅',
-          confirmButtonColor: '#2c5282'
+          confirmButtonColor: 'var(--primary)'
         })
 
         borrowing.value = true
@@ -218,8 +230,7 @@ export default {
             icon: 'success',
             duration: 2000
           })
-          // 刷新图书信息
-          loadBookDetail()
+          await loadBookDetail()
         } else {
           showToast({
             message: res.message || '借阅失败',
@@ -227,9 +238,23 @@ export default {
           })
         }
       } catch (error) {
-        if (error) {
-          showToast(error.message || '借阅失败')
+        if (error !== 'cancel') {
+          showToast(error?.message || '借阅失败')
         }
+      } finally {
+        borrowing.value = false
+      }
+    }
+
+    const handleReserve = async () => {
+      if (!book.value || borrowing.value || reserved.value) return
+      borrowing.value = true
+      try {
+        await bookApi.reserveBook(book.value.id)
+        reserved.value = true
+        showToast({ message: '预约成功，到馆将通知您', icon: 'success' })
+      } catch (error) {
+        showToast(error?.message || '预约失败')
       } finally {
         borrowing.value = false
       }
@@ -244,32 +269,21 @@ export default {
     }
 
     const goBack = () => {
-      router.back()
+      if (window.history.length > 1) router.back()
+      else router.push('/library')
     }
 
     onMounted(() => {
       loadBookDetail()
     })
 
-    const handleReserve = async () => {
-      if (!book.value) return
-      borrowing.value = true
-      try {
-        await bookApi.reserveBook(book.value.id)
-        showToast({ message: '预约成功，到馆将通知您', icon: 'success' })
-      } catch (error) {
-        showToast(error.message || '预约失败')
-      } finally {
-        borrowing.value = false
-      }
-    }
-
     return {
       book,
       loading,
       borrowing,
+      reserved,
+      isAvailable,
       stockPercent,
-      getDefaultCover: getDefaultCoverCategory,
       coverByBook,
       handleBorrow,
       handleReserve,
@@ -283,24 +297,22 @@ export default {
 </script>
 
 <style scoped>
-.book-detail-container {
+.book-detail-page {
   min-height: 100vh;
-  background: #f5f7fa;
-  padding-bottom: 80px;
+  background: var(--bg-page);
+  padding-bottom: 90px;
 }
 
-/* 加载状态 */
-.loading-section {
+.loading-wrap {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 300px;
+  min-height: 300px;
 }
 
-/* 图书头部 */
 .book-header {
-  background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
-  padding: 25px 20px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  padding: 24px 20px;
   display: flex;
   gap: 20px;
 }
@@ -312,27 +324,17 @@ export default {
 
 .book-cover {
   display: block;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-.cover-shadow {
-  position: absolute;
-  bottom: -10px;
-  left: 10px;
-  right: 10px;
-  height: 20px;
-  background: rgba(0, 0, 0, 0.2);
-  filter: blur(10px);
-  border-radius: 50%;
+  box-shadow: var(--shadow-lg);
 }
 
 .book-basic {
   flex: 1;
-  color: #fff;
+  color: var(--text-inverse);
+  min-width: 0;
 }
 
 .book-title {
-  font-size: 20px;
+  font-size: var(--font-xl);
   font-weight: 700;
   margin-bottom: 12px;
   line-height: 1.3;
@@ -346,9 +348,9 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--font-sm);
   margin-bottom: 6px;
-  opacity: 0.9;
+  opacity: 0.92;
 }
 
 .book-tags {
@@ -357,32 +359,19 @@ export default {
   flex-wrap: wrap;
 }
 
-.tag {
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 15px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.book-tags .tag-blue,
+.book-tags .tag-gold {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--text-inverse);
 }
 
-.category-tag {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-
-.location-tag {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-
-/* 库存信息 */
 .stock-section {
-  background: #fff;
-  margin: 15px;
-  border-radius: 12px;
+  background: var(--bg-card);
+  margin: 16px;
+  border-radius: var(--radius-lg);
   padding: 18px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .stock-header {
@@ -393,81 +382,65 @@ export default {
 }
 
 .stock-title {
-  font-size: 15px;
+  font-size: var(--font-md);
   font-weight: 600;
-  color: #333;
-}
-
-.stock-status {
-  font-size: 13px;
-  padding: 4px 10px;
-  border-radius: 15px;
-}
-
-.stock-status.available {
-  background: #e8f8ef;
-  color: #07c160;
-}
-
-.stock-status.empty {
-  background: #fee2e2;
-  color: #ef4444;
+  color: var(--text-primary);
 }
 
 .stock-bar {
   height: 8px;
-  background: #f0f0f0;
-  border-radius: 4px;
+  background: var(--bg-muted);
+  border-radius: var(--radius-full);
   overflow: hidden;
   margin-bottom: 10px;
 }
 
 .stock-fill {
   height: 100%;
-  background: linear-gradient(90deg, #07c160 0%, #38ef7d 100%);
-  border-radius: 4px;
-  transition: width 0.5s ease;
+  background: var(--success);
+  border-radius: var(--radius-full);
+  transition: width .5s ease;
 }
 
 .stock-fill.low-stock {
-  background: linear-gradient(90deg, #ff976a 0%, #f2c94c 100%);
+  background: var(--accent);
 }
 
 .stock-info {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
 }
 
-/* 区块通用样式 */
 .section {
-  background: #fff;
-  margin: 15px;
-  border-radius: 12px;
+  background: var(--bg-card);
+  margin: 16px;
+  border-radius: var(--radius-lg);
   padding: 18px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .section-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: var(--font-lg);
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 15px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .section-header .van-icon {
-  color: #2c5282;
+  color: var(--primary);
 }
 
 .description-text {
-  font-size: 14px;
-  color: #666;
+  font-size: var(--font-md);
+  color: var(--text-secondary);
   line-height: 1.8;
   text-indent: 2em;
 }
@@ -482,21 +455,22 @@ export default {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
-  color: #666;
+  font-size: var(--font-md);
+  color: var(--text-secondary);
 }
 
-/* 底部操作栏 */
 .bottom-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #fff;
+  background: var(--bg-card);
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  box-shadow: var(--shadow-md);
+  border-top: 1px solid var(--border-color);
   z-index: 100;
 }
 
@@ -512,11 +486,11 @@ export default {
   align-items: center;
   gap: 2px;
   cursor: pointer;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .bar-icon span {
-  font-size: 11px;
+  font-size: var(--font-xs);
 }
 
 .bar-right {
@@ -525,9 +499,20 @@ export default {
 
 .borrow-btn {
   height: 44px;
-  font-size: 15px;
+  font-size: var(--font-md);
   font-weight: 600;
-  background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
+}
+
+.reserve-btn {
+  background: linear-gradient(135deg, var(--accent), #e0b44a);
+  color: var(--text-primary);
   border: none;
+  box-shadow: 0 8px 18px rgba(214, 158, 46, 0.28);
+}
+
+.reserved-btn {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
 }
 </style>

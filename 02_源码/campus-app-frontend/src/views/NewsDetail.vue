@@ -1,25 +1,25 @@
 <template>
-  <div class="news-detail-container">
+  <div class="page detail-page">
     <van-nav-bar title="资讯详情" left-arrow @click-left="goBack" />
 
-    <!-- 加载中 -->
-    <van-loading v-if="loading" class="loading" />
+    <div v-if="loading" class="loading-wrap">
+      <van-loading type="spinner" color="var(--primary)">加载中...</van-loading>
+    </div>
 
     <template v-else-if="news">
-      <!-- 资讯封面 -->
-      <van-image
-        v-if="news.coverImage"
-        width="100%"
-        height="200"
-        fit="cover"
-        :src="news.coverImage"
-      />
+      <div class="cover-wrap" v-if="news.coverImage">
+        <van-image
+          width="100%"
+          height="200"
+          fit="cover"
+          :src="news.coverImage"
+        />
+      </div>
 
-      <!-- 资讯内容 -->
       <div class="news-body">
         <h1 class="news-title">{{ news.title }}</h1>
         <div class="news-meta">
-          <span class="source">{{ news.source }}</span>
+          <span class="source">{{ news.source || '校园编辑' }}</span>
           <span class="time">{{ formatDate(news.publishTime) }}</span>
           <span class="view-count">浏览 {{ news.viewCount || 0 }}</span>
         </div>
@@ -27,7 +27,11 @@
       </div>
     </template>
 
-    <van-empty v-else description="资讯加载失败" />
+    <van-empty v-else description="资讯加载失败">
+      <van-button round type="primary" size="small" @click="loadNewsDetail">
+        重新加载
+      </van-button>
+    </van-empty>
   </div>
 </template>
 
@@ -52,7 +56,8 @@ export default {
         const res = await newsApi.getNewsDetail(id)
         news.value = res.data
       } catch (error) {
-        showToast('获取资讯详情失败')
+        news.value = null
+        showToast(error?.message || '获取资讯详情失败')
       } finally {
         loading.value = false
       }
@@ -79,6 +84,7 @@ export default {
       news,
       loading,
       formatDate,
+      loadNewsDetail,
       goBack
     }
   }
@@ -86,51 +92,63 @@ export default {
 </script>
 
 <style scoped>
-.news-detail-container {
+.detail-page {
   min-height: 100vh;
-  background: #fff;
-  padding-bottom: 60px;
+  background: var(--bg-page);
+  padding-bottom: 40px;
 }
 
-.loading {
+.loading-wrap {
   display: flex;
   justify-content: center;
   padding: 60px;
 }
 
+.cover-wrap {
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-color);
+}
+
 .news-body {
-  padding: 16px;
+  margin: 16px;
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .news-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #333;
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--text-primary);
   line-height: 1.5;
   margin-bottom: 12px;
 }
 
 .news-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
-  font-size: 13px;
-  color: #999;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
   padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
   margin-bottom: 16px;
 }
 
 .news-content {
   font-size: 15px;
-  color: #333;
+  color: var(--text-primary);
   line-height: 1.8;
   text-align: justify;
+  word-break: break-word;
 }
 
 .news-content :deep(img) {
   max-width: 100%;
   height: auto;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   margin: 8px 0;
 }
 

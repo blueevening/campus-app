@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="home-container">
     <!-- 顶部欢迎区域 -->
     <div class="welcome-section">
@@ -23,17 +23,17 @@
       <!-- 快捷统计 -->
       <div class="quick-stats">
         <div class="stat-item" @click="navigateTo('/course')">
-          <span class="stat-value">{{ todayCourses }}</span>
+          <span class="stat-value">{{ loadingStats ? '—' : todayCourses }}</span>
           <span class="stat-label">今日课程</span>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item" @click="navigateTo('/borrow-records')">
-          <span class="stat-value">{{ borrowCount }}</span>
+          <span class="stat-value">{{ loadingStats ? '—' : borrowCount }}</span>
           <span class="stat-label">在借图书</span>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item" @click="navigateTo('/news')">
-          <span class="stat-value">{{ unreadNews }}</span>
+          <span class="stat-value">{{ loadingStats ? '—' : unreadNews }}</span>
           <span class="stat-label">未读资讯</span>
         </div>
       </div>
@@ -48,7 +48,7 @@
         </div>
         <van-icon name="arrow" color="#fff" />
       </div>
-      <div class="banner-item banner-purple" @click="navigateTo('/lost-found')">
+      <div class="banner-item banner-accent" @click="navigateTo('/lost-found')">
         <div class="banner-info">
           <h4>失物招领</h4>
           <p>发布寻物启事</p>
@@ -74,7 +74,7 @@
     <!-- 功能入口 - 全部显示 -->
     <div class="section-container">
       <div class="section-header">
-        <h3>全部功能</h3>
+        <h3 class="section-title">全部功能</h3>
       </div>
 
       <div class="function-grid">
@@ -161,14 +161,17 @@
     <!-- 今日课程 -->
     <div class="section-container">
       <div class="section-header">
-        <h3>今日课程</h3>
+        <h3 class="section-title">今日课程</h3>
         <span class="more-link" @click="navigateTo('/course')">
           查看全部
           <van-icon name="arrow" />
         </span>
       </div>
 
-      <div v-if="todayCourseList.length > 0" class="course-list">
+      <div v-if="loadingCourses" class="loading-box">
+        <van-loading color="var(--primary)" vertical>加载课程中...</van-loading>
+      </div>
+      <div v-else-if="todayCourseList.length > 0" class="course-list">
         <div
           v-for="(course, index) in todayCourseList"
           :key="index"
@@ -196,7 +199,6 @@
           </div>
         </div>
       </div>
-
       <van-empty v-else description="今天没有课程安排" image="search">
         <van-button round type="primary" size="small" @click="navigateTo('/course')">
           查看课程表
@@ -207,14 +209,17 @@
     <!-- 最新资讯 -->
     <div class="section-container">
       <div class="section-header">
-        <h3>校园资讯</h3>
+        <h3 class="section-title">校园资讯</h3>
         <span class="more-link" @click="navigateTo('/news')">
           查看全部
           <van-icon name="arrow" />
         </span>
       </div>
 
-      <div v-if="newsList.length > 0" class="news-list">
+      <div v-if="loadingNews" class="loading-box">
+        <van-loading color="var(--primary)" vertical>加载资讯中...</van-loading>
+      </div>
+      <div v-else-if="newsList.length > 0" class="news-list">
         <div
           v-for="news in newsList"
           :key="news.id"
@@ -246,7 +251,6 @@
           />
         </div>
       </div>
-
       <van-empty v-else description="暂无资讯" image="default">
         <van-button round type="primary" size="small" @click="navigateTo('/news')">
           查看资讯
@@ -263,7 +267,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
-import { showDialog } from 'vant'
+import { showDialog, showToast } from 'vant'
 import { courseApi, newsApi, noticeApi, bookApi } from '../api'
 import { DEFAULT_AVATAR } from '../utils/mediaDefaults'
 
@@ -276,10 +280,14 @@ export default {
     const todayCourseList = ref([])
     const newsList = ref([])
 
-    // 统计数据
+    // 统计数据（均来自接口，不写死）
     const todayCourses = ref(0)
-    const borrowCount = ref(2)
+    const borrowCount = ref(0)
     const unreadNews = ref(0)
+
+    const loadingCourses = ref(true)
+    const loadingNews = ref(true)
+    const loadingStats = ref(true)
 
     const username = computed(() => store.getters.getUser.username || '同学')
     const avatar = computed(() => store.getters.getUser.avatar)
@@ -296,6 +304,10 @@ export default {
 
     const navigateTo = (path) => {
       router.push(path)
+    }
+
+    const goToProfile = () => {
+      router.push('/profile')
     }
 
     const formatDate = (dateStr) => {
@@ -339,15 +351,8 @@ export default {
       })
     }
 
-    const showHelp = () => {
-      showDialog({
-        title: '使用帮助',
-        message: '1. 课程表：查看本学期课程安排\n2. 成绩查询：查看各学期成绩和GPA\n3. 图书馆：搜索、借阅、归还图书\n4. 校园资讯：浏览和发布校园新闻\n5. 失物招领：发布和查找失物信息\n6. 第二课堂：参与活动获取积分\n7. 个人中心：管理个人信息和设置',
-        confirmButtonText: '我知道了'
-      })
-    }
-
     const loadTodayCourses = async () => {
+      loadingCourses.value = true
       try {
         const res = await courseApi.getStudentSchedule({ semester: store.getters.getCurrentSemester })
         const all = res.data || []
@@ -373,35 +378,53 @@ export default {
           }
         })
       } catch (error) {
-        console.error('获取课程失败', error)
+        showToast('课程数据加载失败，请稍后重试')
+        todayCourseList.value = []
+        todayCourses.value = 0
+      } finally {
+        loadingCourses.value = false
       }
     }
 
     const loadNews = async () => {
+      loadingNews.value = true
       try {
         const res = await newsApi.getNewsList({ pageNum: 1, pageSize: 3 })
         newsList.value = res.data?.records || []
       } catch (error) {
-        console.error('获取资讯失败', error)
+        showToast('资讯加载失败，请稍后重试')
+        newsList.value = []
+      } finally {
+        loadingNews.value = false
       }
+    }
+
+    const loadStats = async () => {
+      loadingStats.value = true
       try {
         const noticeRes = await noticeApi.getList()
         unreadNews.value = (noticeRes.data && noticeRes.data.unread) || 0
-      } catch (e) {
+      } catch (error) {
         unreadNews.value = 0
       }
       try {
+        // 在借图书数量必须来自接口
         const borrowRes = await bookApi.getBorrowRecords()
         const records = borrowRes.data || []
-        borrowCount.value = records.filter(r => r.status === 1).length
-      } catch (e) {
+        borrowCount.value = Array.isArray(records)
+          ? records.filter(r => r.status === 1).length
+          : 0
+      } catch (error) {
         borrowCount.value = 0
+      } finally {
+        loadingStats.value = false
       }
     }
 
     onMounted(() => {
       loadTodayCourses()
       loadNews()
+      loadStats()
     })
 
     return {
@@ -414,12 +437,15 @@ export default {
       todayCourses,
       borrowCount,
       unreadNews,
+      loadingCourses,
+      loadingNews,
+      loadingStats,
       navigateTo,
+      goToProfile,
       formatDate,
       getNewsTagClass,
       getNewsTagText,
-      showNotice,
-      showHelp
+      showNotice
     }
   }
 }
@@ -428,8 +454,8 @@ export default {
 <style scoped>
 .home-container {
   min-height: 100vh;
-  background: #f5f7fa;
-  padding-bottom: 60px;
+  background: var(--bg-page);
+  padding-bottom: 24px;
 }
 
 @media (min-width: 900px) {
@@ -437,8 +463,10 @@ export default {
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
     gap: 16px;
-    padding: 16px 16px 40px;
+    padding: 16px 24px 40px;
     align-items: start;
+    max-width: 1200px;
+    margin: 0 auto;
   }
   .home-container > .welcome-section {
     grid-column: 1 / -1;
@@ -455,9 +483,9 @@ export default {
 /* 欢迎区域 */
 .welcome-section {
   position: relative;
-  background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 55%, var(--primary-light) 100%);
   padding: 40px 20px 20px;
-  border-radius: 0 0 30px 30px;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   overflow: hidden;
 }
 
@@ -480,23 +508,23 @@ export default {
 }
 
 .welcome-info {
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .welcome-date {
   font-size: 13px;
-  opacity: 0.8;
+  opacity: 0.85;
   margin-bottom: 8px;
 }
 
 .welcome-info h2 {
-  font-size: 24px;
+  font-size: var(--font-2xl);
   font-weight: 700;
   margin-bottom: 4px;
 }
 
 .welcome-text {
-  font-size: 14px;
+  font-size: var(--font-md);
   opacity: 0.9;
 }
 
@@ -510,11 +538,11 @@ export default {
   bottom: -5px;
   left: 50%;
   transform: translateX(-50%);
-  background: #d69e2e;
-  color: #fff;
+  background: var(--accent);
+  color: var(--text-inverse);
   font-size: 10px;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-full);
   white-space: nowrap;
 }
 
@@ -523,8 +551,9 @@ export default {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-md);
   padding: 15px;
   margin-top: 20px;
   backdrop-filter: blur(10px);
@@ -534,7 +563,7 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #fff;
+  color: var(--text-inverse);
   cursor: pointer;
 }
 
@@ -543,14 +572,14 @@ export default {
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: var(--font-2xl);
   font-weight: 700;
   margin-bottom: 2px;
 }
 
 .stat-label {
-  font-size: 12px;
-  opacity: 0.8;
+  font-size: var(--font-sm);
+  opacity: 0.85;
 }
 
 .stat-divider {
@@ -562,8 +591,8 @@ export default {
 /* 快捷横幅 */
 .quick-banner {
   display: flex;
-  gap: 10px;
-  padding: 15px;
+  gap: 12px;
+  padding: 16px 16px 0;
 }
 
 .banner-item {
@@ -571,10 +600,11 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 15px;
-  border-radius: 12px;
+  padding: 16px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform .2s ease, box-shadow .2s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .banner-item:active {
@@ -582,36 +612,37 @@ export default {
 }
 
 .banner-blue {
-  background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
 }
 
-.banner-purple {
-  background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+.banner-accent {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
 }
 
 .banner-info {
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .banner-info h4 {
-  font-size: 16px;
+  font-size: var(--font-lg);
   font-weight: 600;
   margin-bottom: 4px;
 }
 
 .banner-info p {
-  font-size: 12px;
-  opacity: 0.8;
+  font-size: var(--font-sm);
+  opacity: 0.85;
 }
 
 /* 发布资讯横幅 */
 .publish-news-banner {
-  margin: 0 15px 15px;
-  background: linear-gradient(135deg, #2c5282 0%, #4299e1 100%);
-  border-radius: 12px;
-  padding: 15px;
+  margin: 12px 16px;
+  background: linear-gradient(135deg, var(--accent), #e0b44a);
+  border-radius: var(--radius-md);
+  padding: 16px;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform .2s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .publish-news-banner:active {
@@ -628,45 +659,57 @@ export default {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .publish-banner-left h4 {
-  font-size: 16px;
+  font-size: var(--font-lg);
   font-weight: 600;
   margin-bottom: 2px;
 }
 
 .publish-banner-left p {
-  font-size: 12px;
-  opacity: 0.9;
+  font-size: var(--font-sm);
+  opacity: 0.95;
 }
 
 /* 区块容器 */
 .section-container {
-  background: #fff;
-  margin: 15px;
-  border-radius: 15px;
-  padding: 18px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  background: var(--bg-card);
+  margin: 12px 16px;
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
 
-.section-header h3 {
-  font-size: 17px;
-  font-weight: 600;
-  color: #333;
+.section-header .section-title {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-header .section-title::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--accent));
 }
 
 .more-link {
   font-size: 13px;
-  color: #999;
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -674,7 +717,13 @@ export default {
 }
 
 .more-link:hover {
-  color: #2c5282;
+  color: var(--primary);
+}
+
+.loading-box {
+  padding: 32px 0;
+  display: flex;
+  justify-content: center;
 }
 
 /* 功能入口 - 全部显示 */
@@ -690,7 +739,7 @@ export default {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform .2s ease;
 }
 
 .function-item:active {
@@ -700,69 +749,69 @@ export default {
 .icon-wrapper {
   width: 55px;
   height: 55px;
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
 }
 
 .icon-blue {
-  background: linear-gradient(135deg, #2c5282 0%, #4299e1 100%);
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary-light));
 }
 
 .icon-green {
-  background: linear-gradient(135deg, #276749 0%, #38a169 100%);
+  background: linear-gradient(135deg, var(--success), #38a169);
 }
 
 .icon-orange {
-  background: linear-gradient(135deg, #975a16 0%, #d69e2e 100%);
+  background: linear-gradient(135deg, var(--accent), #e0b44a);
 }
 
 .icon-purple {
-  background: linear-gradient(135deg, #553c9a 0%, #805ad5 100%);
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
 }
 
 .icon-red {
-  background: linear-gradient(135deg, #9b2c2c 0%, #e53e3e 100%);
+  background: linear-gradient(135deg, var(--danger), #e53e3e);
 }
 
 .icon-teal {
-  background: linear-gradient(135deg, #234e52 0%, #319795 100%);
+  background: linear-gradient(135deg, var(--info), #319795);
 }
 
 .icon-pink {
-  background: linear-gradient(135deg, #97266d 0%, #d53f8c 100%);
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
 }
 
 .icon-gray {
-  background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+  background: linear-gradient(135deg, var(--text-secondary), var(--text-muted));
 }
 
 .icon-blue-light {
-  background: linear-gradient(135deg, #2b6cb0 0%, #4299e1 100%);
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
 }
 
 .icon-orange-light {
-  background: linear-gradient(135deg, #c05621 0%, #ed8936 100%);
+  background: linear-gradient(135deg, var(--accent), #e0b44a);
 }
 
 .icon-green-light {
-  background: linear-gradient(135deg, #276749 0%, #48bb78 100%);
+  background: linear-gradient(135deg, var(--success), #2f9e6e);
 }
 
 .icon-purple-light {
-  background: linear-gradient(135deg, #553c9a 0%, #805ad5 100%);
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
 }
 
 .icon-yellow {
-  background: linear-gradient(135deg, #975a16 0%, #d69e2e 100%);
+  background: linear-gradient(135deg, var(--accent), #e0b44a);
 }
 
 .function-item span {
-  font-size: 12px;
-  color: #2d3748;
+  font-size: var(--font-sm);
+  color: var(--text-primary);
   font-weight: 500;
 }
 
@@ -777,10 +826,14 @@ export default {
   display: flex;
   align-items: center;
   padding: 15px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border-left: 4px solid;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.course-card:hover {
+  box-shadow: var(--shadow-sm);
 }
 
 .course-card:active {
@@ -788,23 +841,23 @@ export default {
 }
 
 .course-card-0 {
-  background: #ebf8ff;
-  border-left-color: #2c5282;
+  background: var(--primary-soft);
+  border-left-color: var(--primary);
 }
 
 .course-card-1 {
-  background: #f0fff4;
-  border-left-color: #38a169;
+  background: var(--success-soft);
+  border-left-color: var(--success);
 }
 
 .course-card-2 {
-  background: #fffff0;
-  border-left-color: #d69e2e;
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
 }
 
 .course-card-3 {
-  background: #faf5ff;
-  border-left-color: #805ad5;
+  background: var(--info-soft);
+  border-left-color: var(--info);
 }
 
 .course-time {
@@ -816,14 +869,14 @@ export default {
 }
 
 .time-start {
-  font-size: 16px;
+  font-size: var(--font-lg);
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .time-end {
-  font-size: 11px;
-  color: #999;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -834,13 +887,13 @@ export default {
 .course-info h4 {
   font-size: 15px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 6px;
 }
 
 .course-info p {
-  font-size: 12px;
-  color: #666;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -848,18 +901,18 @@ export default {
 }
 
 .course-tag {
-  background: rgba(44, 82, 130, 0.1);
-  color: #2c5282;
-  font-size: 11px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: var(--font-xs);
   padding: 4px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 /* 资讯列表 */
 .news-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
 }
 
 .news-card {
@@ -867,12 +920,16 @@ export default {
   gap: 12px;
   cursor: pointer;
   padding: 12px;
-  border-radius: 12px;
-  transition: background 0.3s ease;
+  border-radius: var(--radius-md);
+  transition: background .2s ease, box-shadow .2s ease;
+}
+
+.news-card:hover {
+  box-shadow: var(--shadow-sm);
 }
 
 .news-card:active {
-  background: #f5f7fa;
+  background: var(--bg-muted);
 }
 
 .news-content {
@@ -881,36 +938,36 @@ export default {
 
 .news-tag {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--font-xs);
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   margin-bottom: 6px;
 }
 
 .tag-news {
-  background: #ebf8ff;
-  color: #2c5282;
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 .tag-lecture {
-  background: #f0fff4;
-  color: #276749;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .tag-activity {
-  background: #fffff0;
-  color: #975a16;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .tag-notice {
-  background: #fff5f5;
-  color: #9b2c2c;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .news-title {
   font-size: 15px;
-  font-weight: 500;
-  color: #2d3748;
+  font-weight: 600;
+  color: var(--text-primary);
   margin-bottom: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -920,7 +977,7 @@ export default {
 
 .news-summary {
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 8px;
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -931,8 +988,8 @@ export default {
 .news-meta {
   display: flex;
   gap: 12px;
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
 }
 
 .news-meta span {
@@ -947,6 +1004,6 @@ export default {
 
 /* 底部留白 */
 .bottom-space {
-  height: 20px;
+  height: 16px;
 }
 </style>

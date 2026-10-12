@@ -1,70 +1,68 @@
 <template>
-  <div class="change-password-container">
+  <div class="page">
     <van-nav-bar title="修改密码" left-arrow @click-left="goBack" />
 
     <div class="form-wrapper">
-      <van-form @submit="handleSubmit">
-        <van-cell-group inset>
-          <!-- 原密码 -->
-          <van-field
-            v-model="form.oldPassword"
-            type="password"
-            name="oldPassword"
-            label="原密码"
-            placeholder="请输入原密码"
-            :rules="[{ required: true, message: '请输入原密码' }]"
-            left-icon="lock"
-          />
+      <div class="form-card page-card">
+        <div class="section-title">修改登录密码</div>
+        <van-form @submit="handleSubmit">
+          <van-cell-group inset>
+            <van-field
+              v-model="form.oldPassword"
+              type="password"
+              name="oldPassword"
+              label="原密码"
+              placeholder="请输入原密码"
+              :rules="[{ required: true, message: '请输入原密码' }]"
+              left-icon="lock"
+            />
+            <van-field
+              v-model="form.newPassword"
+              type="password"
+              name="newPassword"
+              label="新密码"
+              placeholder="请输入新密码"
+              :rules="[
+                { required: true, message: '请输入新密码' },
+                { validator: validatePassword, message: '密码长度为6-20位' }
+              ]"
+              left-icon="lock"
+            />
+            <van-field
+              v-model="form.confirmPassword"
+              type="password"
+              name="confirmPassword"
+              label="确认密码"
+              placeholder="请再次输入新密码"
+              :rules="[
+                { required: true, message: '请确认新密码' },
+                { validator: validateConfirm, message: '两次输入的密码不一致' }
+              ]"
+              left-icon="lock"
+            />
+          </van-cell-group>
 
-          <!-- 新密码 -->
-          <van-field
-            v-model="form.newPassword"
-            type="password"
-            name="newPassword"
-            label="新密码"
-            placeholder="请输入新密码"
-            :rules="[
-              { required: true, message: '请输入新密码' },
-              { validator: validatePassword, message: '密码长度为6-20位' }
-            ]"
-            left-icon="lock"
-          />
+          <div class="submit-area">
+            <van-button
+              round
+              block
+              type="primary"
+              native-type="submit"
+              :loading="submitLoading"
+              loading-text="修改中..."
+            >
+              确认修改
+            </van-button>
+          </div>
+        </van-form>
+      </div>
 
-          <!-- 确认新密码 -->
-          <van-field
-            v-model="form.confirmPassword"
-            type="password"
-            name="confirmPassword"
-            label="确认密码"
-            placeholder="请再次输入新密码"
-            :rules="[
-              { required: true, message: '请确认新密码' },
-              { validator: validateConfirm, message: '两次输入的密码不一致' }
-            ]"
-            left-icon="lock"
-          />
-        </van-cell-group>
-
-        <div class="submit-area">
-          <van-button
-            round
-            block
-            type="primary"
-            native-type="submit"
-            :loading="submitLoading"
-            loading-text="修改中..."
-          >
-            确认修改
-          </van-button>
-        </div>
-      </van-form>
-
-      <!-- 提示信息 -->
-      <div class="tips">
-        <h4>密码要求：</h4>
+      <div class="tips page-card">
+        <div class="section-title">密码要求</div>
         <ul>
-          <li>密码长度为6-20位</li>
+          <li>密码长度为 6-20 位</li>
           <li>建议使用字母、数字和符号的组合</li>
+          <li>两次输入的新密码必须一致</li>
           <li>修改密码后需要重新登录</li>
         </ul>
       </div>
@@ -105,6 +103,10 @@ export default {
         showToast('两次输入的密码不一致')
         return
       }
+      if (form.value.newPassword.length < 6 || form.value.newPassword.length > 20) {
+        showToast('密码长度为6-20位')
+        return
+      }
 
       submitLoading.value = true
       try {
@@ -115,14 +117,16 @@ export default {
 
         await showDialog({
           title: '修改成功',
-          message: '密码修改成功，请重新登录'
+          message: '密码修改成功，请重新登录',
+          confirmButtonText: '去登录'
         })
 
-        // 退出登录
         store.dispatch('logout')
-        router.push('/login')
+        router.replace('/login')
       } catch (error) {
-        showToast(error.message || '修改失败')
+        if (error !== 'cancel' && error !== 'overlay') {
+          showToast(error.message || '修改失败')
+        }
       } finally {
         submitLoading.value = false
       }
@@ -145,44 +149,35 @@ export default {
 </script>
 
 <style scoped>
-.change-password-container {
-  min-height: 100vh;
-  background: #f5f5f5;
-  padding-bottom: 60px;
+.form-wrapper {
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-3);
 }
 
-.form-wrapper {
-  padding-top: 12px;
+.form-card {
+  padding: var(--space-4);
 }
 
 .submit-area {
-  padding: 24px 16px;
+  padding: var(--space-5) 0 var(--space-2);
 }
 
 .tips {
-  margin: 0 16px;
-  padding: 16px;
-  background: #fff;
-  border-radius: 8px;
-}
-
-.tips h4 {
-  font-size: 14px;
-  color: #333;
-  margin-bottom: 8px;
+  padding: var(--space-4);
 }
 
 .tips ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .tips li {
-  font-size: 13px;
-  color: #666;
-  line-height: 1.8;
-  padding-left: 12px;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+  padding-left: 14px;
   position: relative;
 }
 
@@ -191,9 +186,9 @@ export default {
   position: absolute;
   left: 0;
   top: 9px;
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: #1989fa;
+  background: var(--primary);
 }
 </style>

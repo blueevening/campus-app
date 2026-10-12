@@ -45,13 +45,7 @@ api.interceptors.response.use(
     return res
   },
   (error) => {
-    // 网络错误
-    if (error.message.includes('Network Error')) {
-      console.error('网络连接异常，请检查网络')
-    } else if (error.message.includes('timeout')) {
-      console.error('请求超时，请稍后重试')
-    }
-
+    // 网络错误（由调用方 toast，此处统一透传）
     // 401 未授权
     if (error.response && error.response.status === 401) {
       store.dispatch('logout')

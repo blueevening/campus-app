@@ -1,8 +1,7 @@
 <template>
-  <div class="records-container">
+  <div class="page records-page">
     <van-nav-bar title="参与记录" left-arrow @click-left="goBack" />
 
-    <!-- 统计卡片 -->
     <div class="stats-card">
       <div class="stat-item">
         <span class="stat-value">{{ stats.total }}</span>
@@ -15,35 +14,44 @@
       </div>
       <div class="stat-divider"></div>
       <div class="stat-item">
-        <span class="stat-value">{{ stats.totalScore }}</span>
+        <span class="stat-value accent">{{ stats.totalScore }}</span>
         <span class="stat-label">获得积分</span>
       </div>
     </div>
 
-    <!-- 记录列表 -->
     <div class="records-list" v-if="records.length > 0">
       <div class="record-card" v-for="record in records" :key="record.id">
         <div class="record-header">
-          <span class="status-tag" :class="getStatusClass(record.status)">
-            {{ getStatusText(record.status) }}
+          <span class="tag" :class="getStatusClass(record)">
+            {{ getStatusText(record) }}
           </span>
-          <span class="record-score">+{{ record.score }}分</span>
+          <span
+            class="record-score"
+            :class="{ muted: record.status !== 2 }"
+          >
+            {{ record.status === 2 ? `+${record.score}分` : `预计+${record.score}分` }}
+          </span>
         </div>
         <div class="record-body">
-          <h4>{{ record.activityName || '活动' }}</h4>
+          <h4>{{ record.activityName || ('活动 #' + record.activityId) }}</h4>
           <div class="record-meta">
             <span>
               <van-icon name="clock-o" />
               {{ formatDate(record.createTime) }}
             </span>
+            <span v-if="record.reviewStatus === 'pending'" class="review-tip">报名审核中</span>
+            <span v-else-if="record.reviewStatus === 'rejected'" class="review-tip rejected">报名未通过</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 空状态 -->
-    <van-empty v-else description="暂无参与记录">
-      <van-button round type="primary" size="small" @click="goBack">
+    <div v-if="loading" class="loading-wrap">
+      <van-loading type="spinner" color="var(--primary)">加载中...</van-loading>
+    </div>
+
+    <van-empty v-if="!loading && records.length === 0" description="暂无参与记录">
+      <van-button round type="primary" size="small" @click="goActivities">
         去看看活动
       </van-button>
     </van-empty>
@@ -61,35 +69,38 @@ export default {
   setup() {
     const router = useRouter()
     const records = ref([])
+    const loading = ref(true)
 
-    const stats = computed(() => {
-      return {
-        total: records.value.length,
-        completed: records.value.filter(r => r.status === 2).length,
-        totalScore: records.value
-          .filter(r => r.status === 2)
-          .reduce((sum, r) => sum + (r.score || 0), 0)
-      }
-    })
+    const stats = computed(() => ({
+      total: records.value.length,
+      completed: records.value.filter(r => r.status === 2).length,
+      totalScore: records.value
+        .filter(r => r.status === 2)
+        .reduce((sum, r) => sum + (r.score || 0), 0)
+    }))
 
-    const getStatusClass = (status) => {
+    const getStatusClass = (record) => {
+      if (record.reviewStatus === 'rejected') return 'tag-red'
+      if (record.reviewStatus === 'pending') return 'tag-gray'
       const classes = {
-        0: 'status-registered',
-        1: 'status-checked',
-        2: 'status-completed',
-        3: 'status-cancelled'
+        0: 'tag-blue',
+        1: 'tag-gold',
+        2: 'tag-green',
+        3: 'tag-gray'
       }
-      return classes[status] || 'status-registered'
+      return classes[record.status] || 'tag-gray'
     }
 
-    const getStatusText = (status) => {
+    const getStatusText = (record) => {
+      if (record.reviewStatus === 'rejected') return '报名未通过'
+      if (record.reviewStatus === 'pending') return '审核中'
       const texts = {
-        0: '已报名',
+        0: '待参加',
         1: '已签到',
         2: '已完成',
         3: '已取消'
       }
-      return texts[status] || '未知'
+      return texts[record.status] || '未知'
     }
 
     const formatDate = (dateStr) => {
@@ -99,16 +110,23 @@ export default {
     }
 
     const loadRecords = async () => {
+      loading.value = true
       try {
         const res = await secondClassApi.getUserRecords()
         records.value = res.data || []
       } catch (error) {
-        showToast('获取记录失败')
+        showToast(error?.message || '获取记录失败')
+      } finally {
+        loading.value = false
       }
     }
 
     const goBack = () => {
       router.back()
+    }
+
+    const goActivities = () => {
+      router.push('/second-class')
     }
 
     onMounted(() => {
@@ -117,31 +135,34 @@ export default {
 
     return {
       records,
+      loading,
       stats,
       getStatusClass,
       getStatusText,
       formatDate,
-      goBack
+      goBack,
+      goActivities
     }
   }
 }
 </script>
 
 <style scoped>
-.records-container {
+.records-page {
   min-height: 100vh;
-  background: #f5f7fa;
+  background: var(--bg-page);
+  padding-bottom: 24px;
 }
 
 .stats-card {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
-  margin: 15px;
-  padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  margin: 16px;
+  padding: 22px 16px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 28px rgba(44, 82, 130, 0.28);
 }
 
 .stat-item {
@@ -153,31 +174,37 @@ export default {
 
 .stat-value {
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.stat-value.accent {
+  color: #f6e05e;
 }
 
 .stat-label {
-  font-size: 13px;
-  opacity: 0.9;
+  font-size: var(--font-sm);
+  opacity: 0.88;
 }
 
 .stat-divider {
   width: 1px;
-  height: 35px;
-  background: rgba(255, 255, 255, 0.3);
+  height: 36px;
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .records-list {
-  padding: 0 15px;
+  padding: 0 16px;
 }
 
 .record-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 15px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
   margin-bottom: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .record-header {
@@ -187,50 +214,50 @@ export default {
   margin-bottom: 10px;
 }
 
-.status-tag {
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 15px;
-}
-
-.status-registered {
-  background: #e8f4ff;
-  color: #1989fa;
-}
-
-.status-checked {
-  background: #fff8e6;
-  color: #ff976a;
-}
-
-.status-completed {
-  background: #e8f8ef;
-  color: #07c160;
-}
-
-.status-cancelled {
-  background: #fee2e2;
-  color: #ef4444;
-}
-
 .record-score {
-  font-size: 16px;
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.record-score.muted {
+  color: var(--text-muted);
+  font-size: var(--font-sm);
   font-weight: 600;
-  color: #f59e0b;
 }
 
 .record-body h4 {
-  font-size: 15px;
-  font-weight: 500;
-  color: #333;
+  font-size: var(--font-md);
+  font-weight: 700;
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 .record-meta {
-  font-size: 13px;
-  color: #999;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.review-tip {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--warning-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.review-tip.rejected {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
 }
 </style>

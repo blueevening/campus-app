@@ -1,102 +1,50 @@
 <template>
-  <div class="edit-profile-container">
+  <div class="page">
     <van-nav-bar title="编辑资料" left-arrow @click-left="goBack" />
 
     <div class="form-wrapper">
-      <!-- 头像 -->
-      <div class="avatar-section">
-        <van-image
-          round
-          width="80"
-          height="80"
-          :src="form.avatar || defaultAvatar"
-        />
+      <div class="avatar-section page-card">
+        <van-image round width="80" height="80" :src="form.avatar || defaultAvatar" />
         <span class="change-avatar" @click="handleChangeAvatar">更换头像</span>
       </div>
 
-      <van-form @submit="handleSubmit">
-        <van-cell-group inset>
-          <!-- 用户名 -->
-          <van-field
-            v-model="form.username"
-            name="username"
-            label="用户名"
-            placeholder="请输入用户名"
-            :rules="[{ required: true, message: '请输入用户名' }]"
-          />
-
-          <!-- 学号（只读） -->
-          <van-field
-            v-model="form.studentId"
-            name="studentId"
-            label="学号"
-            readonly
-          />
-
-          <!-- 学院 -->
-          <van-field
-            v-model="form.college"
-            name="college"
-            label="学院"
-            placeholder="请输入学院"
-          />
-
-          <!-- 专业 -->
-          <van-field
-            v-model="form.major"
-            name="major"
-            label="专业"
-            placeholder="请输入专业"
-          />
-
-          <!-- 年级 -->
-          <van-field
-            v-model="form.grade"
-            name="grade"
-            label="年级"
-            placeholder="请输入年级"
-          />
-
-          <!-- 班级 -->
-          <van-field
-            v-model="form.className"
-            name="className"
-            label="班级"
-            placeholder="请输入班级"
-          />
-
-          <!-- 手机号 -->
-          <van-field
-            v-model="form.phone"
-            name="phone"
-            label="手机号"
-            type="tel"
-            placeholder="请输入手机号"
-          />
-
-          <!-- 邮箱 -->
-          <van-field
-            v-model="form.email"
-            name="email"
-            label="邮箱"
-            type="email"
-            placeholder="请输入邮箱"
-          />
-        </van-cell-group>
-
-        <div class="submit-area">
-          <van-button
-            round
-            block
-            type="primary"
-            native-type="submit"
-            :loading="submitLoading"
-            loading-text="保存中..."
-          >
-            保存
-          </van-button>
+      <div class="form-card page-card">
+        <div class="section-title">基本信息</div>
+        <div v-if="pageLoading" class="loading-box">
+          <van-loading type="spinner" color="#2c5282">加载中...</van-loading>
         </div>
-      </van-form>
+        <van-form v-else @submit="handleSubmit">
+          <van-cell-group inset>
+            <van-field
+              v-model="form.username"
+              name="username"
+              label="用户名"
+              placeholder="请输入用户名"
+              :rules="[{ required: true, message: '请输入用户名' }]"
+            />
+            <van-field v-model="form.studentId" name="studentId" label="学号" readonly />
+            <van-field v-model="form.college" name="college" label="学院" placeholder="请输入学院" />
+            <van-field v-model="form.major" name="major" label="专业" placeholder="请输入专业" />
+            <van-field v-model="form.grade" name="grade" label="年级" placeholder="请输入年级" />
+            <van-field v-model="form.className" name="className" label="班级" placeholder="请输入班级" />
+            <van-field v-model="form.phone" name="phone" label="手机号" type="tel" placeholder="请输入手机号" />
+            <van-field v-model="form.email" name="email" label="邮箱" type="email" placeholder="请输入邮箱" />
+          </van-cell-group>
+
+          <div class="submit-area">
+            <van-button
+              round
+              block
+              type="primary"
+              native-type="submit"
+              :loading="submitLoading"
+              loading-text="保存中..."
+            >
+              保存
+            </van-button>
+          </div>
+        </van-form>
+      </div>
     </div>
   </div>
 </template>
@@ -115,6 +63,7 @@ export default {
     const router = useRouter()
     const store = useStore()
     const submitLoading = ref(false)
+    const pageLoading = ref(true)
 
     const form = ref({
       username: '',
@@ -128,23 +77,29 @@ export default {
       avatar: ''
     })
 
+    const applyUserToForm = (user) => {
+      form.value = {
+        username: user.username || '',
+        studentId: user.studentId || '',
+        college: user.college || '',
+        major: user.major || '',
+        grade: user.grade || '',
+        className: user.className || '',
+        phone: user.phone || '',
+        email: user.email || '',
+        avatar: user.avatar || ''
+      }
+    }
+
     const loadUserInfo = async () => {
+      pageLoading.value = true
       try {
         const res = await userApi.getUserInfo()
-        const user = res.data
-        form.value = {
-          username: user.username || '',
-          studentId: user.studentId || '',
-          college: user.college || '',
-          major: user.major || '',
-          grade: user.grade || '',
-          className: user.className || '',
-          phone: user.phone || '',
-          email: user.email || '',
-          avatar: user.avatar || ''
-        }
+        applyUserToForm(res.data || {})
       } catch (error) {
-        showToast('获取用户信息失败')
+        showToast(error.message || '获取用户信息失败')
+      } finally {
+        pageLoading.value = false
       }
     }
 
@@ -155,7 +110,7 @@ export default {
     const handleSubmit = async () => {
       submitLoading.value = true
       try {
-        await userApi.updateUserInfo({
+        const payload = {
           username: form.value.username,
           college: form.value.college,
           major: form.value.major,
@@ -163,13 +118,19 @@ export default {
           className: form.value.className,
           phone: form.value.phone,
           email: form.value.email
-        })
+        }
+        const res = await userApi.updateUserInfo(payload)
+        const updated = res.data || {}
 
-        // 更新vuex中的用户信息
+        // 同步全局用户信息（含角色/token 字段不覆盖）
         store.dispatch('updateUserInfo', {
           ...store.getters.getUser,
-          username: form.value.username,
-          avatar: form.value.avatar
+          ...payload,
+          studentId: updated.studentId || form.value.studentId,
+          avatar: updated.avatar || form.value.avatar,
+          id: updated.id || store.getters.getUser.id,
+          role: updated.role !== undefined ? updated.role : store.getters.getUser.role,
+          status: updated.status !== undefined ? updated.status : store.getters.getUser.status
         })
 
         showToast('保存成功')
@@ -192,6 +153,7 @@ export default {
     return {
       form,
       defaultAvatar: DEFAULT_AVATAR,
+      pageLoading,
       submitLoading,
       handleChangeAvatar,
       handleSubmit,
@@ -202,33 +164,38 @@ export default {
 </script>
 
 <style scoped>
-.edit-profile-container {
-  min-height: 100vh;
-  background: #f5f5f5;
-  padding-bottom: 60px;
-}
-
 .form-wrapper {
-  padding-top: 12px;
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-3);
 }
 
 .avatar-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 0;
-  background: #fff;
-  margin-bottom: 12px;
+  padding: var(--space-6) var(--space-4);
 }
 
 .change-avatar {
-  margin-top: 12px;
-  font-size: 14px;
-  color: #1989fa;
+  margin-top: var(--space-3);
+  font-size: var(--font-md);
+  color: var(--primary);
+  font-weight: 600;
   cursor: pointer;
 }
 
+.form-card {
+  padding: var(--space-4);
+}
+
 .submit-area {
-  padding: 24px 16px;
+  padding: var(--space-5) 0 var(--space-2);
+}
+
+.loading-box {
+  padding: var(--space-8);
+  display: flex;
+  justify-content: center;
 }
 </style>

@@ -1,12 +1,11 @@
 <template>
-  <div class="library-container">
+  <div class="page library-page">
     <van-nav-bar title="图书馆" left-arrow @click-left="goBack">
       <template #right>
-        <van-icon name="records" size="20" @click="navigateTo('/borrow-records')" />
+        <van-icon name="records" size="20" color="var(--primary)" @click="navigateTo('/borrow-records')" />
       </template>
     </van-nav-bar>
 
-    <!-- 搜索栏 -->
     <div class="search-section">
       <van-search
         v-model="keyword"
@@ -17,12 +16,11 @@
         background="transparent"
       >
         <template #action>
-          <span @click="onSearch">搜索</span>
+          <span class="search-action" @click="onSearch">搜索</span>
         </template>
       </van-search>
     </div>
 
-    <!-- 分类筛选 -->
     <div class="category-section">
       <div class="category-scroll">
         <div
@@ -45,111 +43,114 @@
       </div>
     </div>
 
-    <!-- 图书统计 -->
     <div class="stats-bar">
-      <span class="stats-text">共 {{ total }} 本图书</span>
+      <span class="stats-text">共 <em>{{ total }}</em> 本图书</span>
       <div class="view-toggle">
         <van-icon
           :name="viewMode === 'list' ? 'apps-o' : 'list-switch'"
           size="18"
+          color="var(--primary)"
           @click="viewMode = viewMode === 'list' ? 'grid' : 'list'"
         />
       </div>
     </div>
 
-    <!-- 图书列表视图 -->
-    <div class="book-list" v-if="viewMode === 'list'">
-      <div
-        class="book-card"
-        v-for="book in books"
-        :key="book.id"
-        @click="goToDetail(book.id)"
-      >
-        <div class="book-cover">
-          <van-image
-            width="80"
-            height="110"
-            fit="cover"
-            :src="coverByBook(book)"
-            radius="6"
-          />
-          <div class="book-status" :class="book.availableCopies > 0 ? 'status-available' : 'status-empty'">
-            {{ book.availableCopies > 0 ? '可借' : '已借完' }}
-          </div>
-        </div>
-        <div class="book-info">
-          <h4 class="book-name">{{ book.bookName }}</h4>
-          <p class="book-author">
-            <van-icon name="user-o" />
-            {{ book.author }}
-          </p>
-          <p class="book-publisher">
-            <van-icon name="shop-o" />
-            {{ book.publisher }}
-          </p>
-          <div class="book-meta">
-            <span class="book-category">{{ book.category }}</span>
-            <span class="book-location">
-              <van-icon name="location-o" />
-              {{ book.location }}
+    <div v-if="loading && books.length === 0" class="loading-wrap">
+      <van-loading type="spinner" color="var(--primary)">加载图书中...</van-loading>
+    </div>
+
+    <template v-else>
+      <div class="book-list" v-if="viewMode === 'list' && books.length > 0">
+        <div
+          class="book-card"
+          v-for="book in books"
+          :key="book.id"
+          @click="goToDetail(book.id)"
+        >
+          <div class="book-cover">
+            <van-image
+              width="80"
+              height="110"
+              fit="cover"
+              :src="coverByBook(book)"
+              radius="8"
+            />
+            <span class="tag book-status" :class="book.availableCopies > 0 ? 'tag-green' : 'tag-red'">
+              {{ book.availableCopies > 0 ? '可借' : '已借完' }}
             </span>
           </div>
-          <div class="book-stock">
-            <div class="stock-bar">
-              <div
-                class="stock-fill"
-                :style="{ width: (book.availableCopies / book.totalCopies * 100) + '%' }"
-              ></div>
+          <div class="book-info">
+            <h4 class="book-name">{{ book.bookName }}</h4>
+            <p class="book-author">
+              <van-icon name="user-o" />
+              {{ book.author }}
+            </p>
+            <p class="book-publisher">
+              <van-icon name="shop-o" />
+              {{ book.publisher }}
+            </p>
+            <div class="book-meta">
+              <span class="tag tag-blue">{{ book.category }}</span>
+              <span class="book-location">
+                <van-icon name="location-o" />
+                {{ book.location }}
+              </span>
             </div>
-            <span class="stock-text">库存：{{ book.availableCopies }}/{{ book.totalCopies }}</span>
+            <div class="book-stock">
+              <div class="stock-bar">
+                <div
+                  class="stock-fill"
+                  :class="{ low: stockPercent(book) < 30 }"
+                  :style="{ width: stockPercent(book) + '%' }"
+                ></div>
+              </div>
+              <span class="stock-text">库存：{{ book.availableCopies }}/{{ book.totalCopies }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 图书网格视图 -->
-    <div class="book-grid" v-else>
-      <div
-        class="book-grid-item"
-        v-for="book in books"
-        :key="book.id"
-        @click="goToDetail(book.id)"
-      >
-        <div class="grid-cover">
-          <van-image
-            width="100%"
-            height="140"
-            fit="cover"
-            :src="coverByBook(book)"
-            radius="8"
-          />
-          <div class="grid-status" :class="book.availableCopies > 0 ? 'status-available' : 'status-empty'">
-            {{ book.availableCopies > 0 ? '可借' : '已借完' }}
+      <div class="book-grid" v-else-if="viewMode === 'grid' && books.length > 0">
+        <div
+          class="book-grid-item"
+          v-for="book in books"
+          :key="book.id"
+          @click="goToDetail(book.id)"
+        >
+          <div class="grid-cover">
+            <van-image
+              width="100%"
+              height="140"
+              fit="cover"
+              :src="coverByBook(book)"
+              radius="8"
+            />
+            <span class="tag grid-status" :class="book.availableCopies > 0 ? 'tag-green' : 'tag-red'">
+              {{ book.availableCopies > 0 ? '可借' : '已借完' }}
+            </span>
+          </div>
+          <div class="grid-info">
+            <h4 class="grid-name">{{ book.bookName }}</h4>
+            <p class="grid-author">{{ book.author }}</p>
+            <p class="grid-stock">库存：{{ book.availableCopies }}/{{ book.totalCopies }}</p>
           </div>
         </div>
-        <div class="grid-info">
-          <h4 class="grid-name">{{ book.bookName }}</h4>
-          <p class="grid-author">{{ book.author }}</p>
-          <p class="grid-stock">库存：{{ book.availableCopies }}/{{ book.totalCopies }}</p>
-        </div>
       </div>
-    </div>
 
-    <!-- 空状态 -->
-    <van-empty v-if="books.length === 0 && !loading" description="暂无图书">
-      <template #description>
-        <p>未找到{{ keyword ? `"${keyword}"相关的` : '' }}图书</p>
-      </template>
-    </van-empty>
+      <van-empty v-if="books.length === 0 && !loading" description="暂无图书">
+        <template #description>
+          <p>未找到{{ keyword ? `"${keyword}"相关的` : activeCategory ? `「${activeCategory}」分类的` : '' }}图书</p>
+        </template>
+      </van-empty>
 
-    <!-- 加载状态 -->
-    <div class="loading-section" v-if="loading">
-      <van-loading type="spinner" color="#2c5282">加载中...</van-loading>
-    </div>
+      <div v-if="loading && books.length > 0" class="loading-section">
+        <van-loading type="spinner" color="var(--primary)">加载更多...</van-loading>
+      </div>
 
-    <div v-if="finished && books.length > 0" class="finished-text">
-      — 已经到底了 —
-    </div>
+      <div v-if="finished && books.length > 0 && !loading" class="finished-text">
+        — 已经到底了 —
+      </div>
+    </template>
   </div>
 </template>
 
@@ -158,7 +159,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { bookApi } from '../api'
-import { bookCover as getDefaultCover, coverByBook } from '../utils/mediaDefaults'
+import { coverByBook } from '../utils/mediaDefaults'
 
 export default {
   name: 'Library',
@@ -183,7 +184,12 @@ export default {
       { value: '其他', label: '其他', icon: 'ellipsis' }
     ]
 
-    const getDefaultCoverCategory = getDefaultCover
+    const stockPercent = (book) => {
+      const totalCopies = Number(book.totalCopies) || 0
+      const available = Number(book.availableCopies) || 0
+      if (totalCopies <= 0) return 0
+      return Math.min(100, Math.round((available / totalCopies) * 100))
+    }
 
     const loadBooks = async (reset = false) => {
       if (reset) {
@@ -202,7 +208,7 @@ export default {
         })
 
         const newBooks = res.data?.records || []
-        total.value = res.data?.total || 0
+        total.value = res.data?.total ?? newBooks.length
 
         if (reset) {
           books.value = newBooks
@@ -216,7 +222,7 @@ export default {
           pageNum.value++
         }
       } catch (error) {
-        showToast('获取图书失败')
+        showToast(error?.message || '获取图书失败')
       } finally {
         loading.value = false
       }
@@ -240,7 +246,8 @@ export default {
     }
 
     const goBack = () => {
-      router.back()
+      if (window.history.length > 1) router.back()
+      else router.push('/')
     }
 
     onMounted(() => {
@@ -256,8 +263,8 @@ export default {
       finished,
       total,
       categories,
-      getDefaultCover: getDefaultCoverCategory,
       coverByBook,
+      stockPercent,
       loadBooks,
       switchCategory,
       onSearch,
@@ -270,28 +277,32 @@ export default {
 </script>
 
 <style scoped>
-.library-container {
+.library-page {
   min-height: 100vh;
-  background: #f5f7fa;
-  padding-bottom: 20px;
+  background: var(--bg-page);
+  padding-bottom: 24px;
 }
 
-/* 搜索区域 */
 .search-section {
-  padding: 10px 15px;
-  background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
+  padding: 10px 12px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
 }
 
-/* 分类标签 */
+.search-action {
+  color: var(--text-inverse);
+  font-size: var(--font-md);
+  font-weight: 600;
+}
+
 .category-section {
-  background: #fff;
+  background: var(--bg-card);
   padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .category-scroll {
   display: flex;
-  padding: 0 15px;
+  padding: 0 16px;
   overflow-x: auto;
   gap: 10px;
   -webkit-overflow-scrolling: touch;
@@ -304,60 +315,74 @@ export default {
 .category-tag {
   flex-shrink: 0;
   padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  color: #666;
-  background: #f5f5f5;
+  border-radius: var(--radius-full);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  background: var(--bg-muted);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all .2s ease;
   display: flex;
   align-items: center;
   gap: 4px;
+  border: 1px solid var(--border-color);
 }
 
 .category-tag.active {
-  background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
-  color: #fff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: var(--text-inverse);
+  border-color: transparent;
 }
 
 .category-tag:active {
   transform: scale(0.95);
 }
 
-/* 统计栏 */
 .stats-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 15px;
-  background: #fff;
-  margin-top: 8px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  margin: 10px 16px 0;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .stats-text {
-  font-size: 13px;
-  color: #999;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.stats-text em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--primary);
 }
 
 .view-toggle {
   cursor: pointer;
-  color: #2c5282;
+  padding: 4px;
 }
 
-/* 图书列表视图 */
 .book-list {
-  padding: 8px 15px;
+  padding: 12px 16px;
 }
 
 .book-card {
   display: flex;
-  background: #fff;
-  border-radius: 12px;
-  padding: 15px;
-  margin-bottom: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+
+.book-card:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .book-card:active {
@@ -374,31 +399,19 @@ export default {
   position: absolute;
   top: 5px;
   right: 5px;
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.status-available {
-  background: #e8f8ef;
-  color: #07c160;
-}
-
-.status-empty {
-  background: #fee2e2;
-  color: #ef4444;
 }
 
 .book-info {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .book-name {
-  font-size: 16px;
+  font-size: var(--font-lg);
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -408,8 +421,8 @@ export default {
 
 .book-author,
 .book-publisher {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -418,21 +431,15 @@ export default {
 
 .book-meta {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   margin-top: 6px;
 }
 
-.book-category {
-  font-size: 11px;
-  padding: 2px 8px;
-  background: #f0f7ff;
-  color: #1989fa;
-  border-radius: 4px;
-}
-
 .book-location {
-  font-size: 11px;
-  color: #999;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 2px;
@@ -445,39 +452,47 @@ export default {
 
 .stock-bar {
   height: 4px;
-  background: #f0f0f0;
-  border-radius: 2px;
+  background: var(--bg-muted);
+  border-radius: var(--radius-full);
   overflow: hidden;
   margin-bottom: 4px;
 }
 
 .stock-fill {
   height: 100%;
-  background: linear-gradient(90deg, #07c160 0%, #38ef7d 100%);
-  border-radius: 2px;
-  transition: width 0.3s ease;
+  background: var(--success);
+  border-radius: var(--radius-full);
+  transition: width .3s ease;
+}
+
+.stock-fill.low {
+  background: var(--accent);
 }
 
 .stock-text {
-  font-size: 11px;
-  color: #999;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
 }
 
-/* 图书网格视图 */
 .book-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  padding: 8px 15px;
+  padding: 12px 16px;
 }
 
 .book-grid-item {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+
+.book-grid-item:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .book-grid-item:active {
@@ -492,19 +507,16 @@ export default {
   position: absolute;
   top: 8px;
   right: 8px;
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 4px;
 }
 
 .grid-info {
-  padding: 10px;
+  padding: 10px 12px 12px;
 }
 
 .grid-name {
-  font-size: 14px;
+  font-size: var(--font-md);
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 4px;
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -513,27 +525,34 @@ export default {
 }
 
 .grid-author {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
   margin-bottom: 4px;
 }
 
 .grid-stock {
-  font-size: 11px;
-  color: #07c160;
+  font-size: var(--font-xs);
+  color: var(--success);
+  font-weight: 600;
 }
 
-/* 加载状态 */
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 280px;
+}
+
 .loading-section {
   display: flex;
   justify-content: center;
-  padding: 30px;
+  padding: 20px;
 }
 
 .finished-text {
   text-align: center;
   padding: 20px;
-  font-size: 13px;
-  color: #ccc;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
 }
 </style>

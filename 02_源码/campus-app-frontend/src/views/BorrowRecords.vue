@@ -1,26 +1,25 @@
 <template>
-  <div class="borrow-records-container">
+  <div class="page borrow-records-page">
     <van-nav-bar title="借阅记录" left-arrow @click-left="goBack">
       <template #right>
-        <van-icon name="search" size="20" @click="showSearch = !showSearch" />
+        <van-icon name="search" size="20" color="var(--primary)" @click="showSearch = !showSearch" />
       </template>
     </van-nav-bar>
 
-    <!-- 搜索栏 -->
     <div class="search-section" v-if="showSearch">
       <van-search
         v-model="searchKeyword"
         placeholder="搜索图书名称"
-        @search="filterRecords"
+        @search="noop"
         show-action
+        shape="round"
       >
         <template #action>
-          <span @click="searchKeyword = ''; filterRecords()">清除</span>
+          <span class="search-action" @click="searchKeyword = ''">清除</span>
         </template>
       </van-search>
     </div>
 
-    <!-- 统计卡片 -->
     <div class="stats-card">
       <div class="stat-item">
         <span class="stat-value">{{ stats.borrowing }}</span>
@@ -38,130 +37,137 @@
       </div>
     </div>
 
-    <!-- 状态筛选 -->
     <div class="filter-section">
       <div
         class="filter-tag"
         :class="{ active: activeStatus === 'ALL' }"
-        @click="activeStatus = 'ALL'; filterRecords()"
+        @click="setStatus('ALL')"
       >
         全部
       </div>
       <div
         class="filter-tag"
         :class="{ active: activeStatus === 'BORROWED' }"
-        @click="activeStatus = 'BORROWED'; filterRecords()"
+        @click="setStatus('BORROWED')"
       >
         借阅中
       </div>
       <div
         class="filter-tag"
         :class="{ active: activeStatus === 'RETURNED' }"
-        @click="activeStatus = 'RETURNED'; filterRecords()"
+        @click="setStatus('RETURNED')"
       >
         已归还
       </div>
       <div
         class="filter-tag"
         :class="{ active: activeStatus === 'OVERDUE' }"
-        @click="activeStatus = 'OVERDUE'; filterRecords()"
+        @click="setStatus('OVERDUE')"
       >
         已逾期
       </div>
     </div>
 
-    <!-- 借阅记录列表 -->
-    <div class="records-list" v-if="filteredRecords.length > 0">
-      <div
-        class="record-card"
-        v-for="record in filteredRecords"
-        :key="record.id"
-      >
-        <div class="record-header">
-          <span class="status-tag" :class="getStatusClass(record.status)">
-            {{ getStatusText(record.status) }}
-          </span>
-          <span class="record-time">{{ formatDate(record.borrowDate) }}</span>
-        </div>
+    <div v-if="loading" class="loading-wrap">
+      <van-loading type="spinner" color="var(--primary)">加载借阅记录...</van-loading>
+    </div>
 
-        <div class="record-body">
-          <div class="book-cover">
-            <van-image
-              width="60"
-              height="80"
-              fit="cover"
-              :src="record.cover || defaultCover"
-              radius="6"
-            />
+    <template v-else>
+      <div class="records-list" v-if="filteredRecords.length > 0">
+        <div
+          class="record-card"
+          v-for="record in filteredRecords"
+          :key="record.id"
+        >
+          <div class="record-header">
+            <span class="tag" :class="getTagClass(record)">
+              {{ getDisplayStatusText(record) }}
+            </span>
+            <span class="record-time">{{ formatDate(record.borrowDate) }}</span>
           </div>
-          <div class="book-info">
-            <h4 class="book-name">{{ record.bookName }}</h4>
-            <p class="book-author">{{ record.author }}</p>
-            <div class="date-info">
-              <div class="date-item">
-                <span class="date-label">借阅：</span>
-                <span class="date-value">{{ formatDateShort(record.borrowDate) }}</span>
-              </div>
-              <div class="date-item">
-                <span class="date-label">应还：</span>
-                <span class="date-value" :class="{ 'overdue-text': isOverdue(record) }">
-                  {{ formatDateShort(record.dueDate) }}
-                </span>
-              </div>
-              <div class="date-item" v-if="record.returnDate">
-                <span class="date-label">归还：</span>
-                <span class="date-value success-text">{{ formatDateShort(record.returnDate) }}</span>
+
+          <div class="record-body">
+            <div class="book-cover">
+              <van-image
+                width="60"
+                height="80"
+                fit="cover"
+                :src="record.cover || defaultCover"
+                radius="8"
+              />
+            </div>
+            <div class="book-info">
+              <h4 class="book-name">{{ record.bookName }}</h4>
+              <p class="book-author">{{ record.author }}</p>
+              <div class="date-info">
+                <div class="date-item">
+                  <span class="date-label">借阅</span>
+                  <span class="date-value">{{ formatDateShort(record.borrowDate) }}</span>
+                </div>
+                <div class="date-item">
+                  <span class="date-label">应还</span>
+                  <span class="date-value" :class="{ 'overdue-text': isOverdue(record) }">
+                    {{ formatDateShort(record.dueDate) }}
+                    <em v-if="dueHint(record)" class="due-hint" :class="{ 'overdue-text': isOverdue(record) }">
+                      {{ dueHint(record) }}
+                    </em>
+                  </span>
+                </div>
+                <div class="date-item" v-if="record.returnDate">
+                  <span class="date-label">归还</span>
+                  <span class="date-value success-text">{{ formatDateShort(record.returnDate) }}</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="record-footer" v-if="record.status === 1">
-          <div class="renew-info">
-            <van-icon name="replay" />
-            <span>已续借 {{ record.renewCount || 0 }}/2 次</span>
-          </div>
-          <div class="action-buttons">
-            <van-button
-              size="small"
-              round
-              type="primary"
-              @click="handleRenew(record)"
-              :disabled="record.renewCount >= 2"
-              class="action-btn"
-            >
-              续借
-            </van-button>
-            <van-button
-              size="small"
-              round
-              type="success"
-              @click="handleReturn(record)"
-              class="action-btn"
-            >
-              归还
-            </van-button>
+          <div class="record-footer" v-if="canOperate(record)">
+            <div class="renew-info">
+              <van-icon name="replay" />
+              <span>已续借 {{ record.renewCount || 0 }}/2 次</span>
+            </div>
+            <div class="action-buttons">
+              <van-button
+                size="small"
+                round
+                type="primary"
+                @click="handleRenew(record)"
+                :disabled="record.renewCount >= 2"
+                class="action-btn"
+              >
+                续借
+              </van-button>
+              <van-button
+                size="small"
+                round
+                type="success"
+                @click="handleReturn(record)"
+                class="action-btn"
+              >
+                归还
+              </van-button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 空状态 -->
-    <van-empty v-else description="暂无借阅记录">
-      <template #description>
-        <p v-if="activeStatus !== 'ALL'">暂无{{ getStatusTextByCode(activeStatus) }}记录</p>
-        <p v-else>暂无借阅记录</p>
-      </template>
-      <van-button
-        round
-        type="primary"
-        size="small"
-        @click="navigateTo('/library')"
-        class="empty-btn"
-      >
-        去图书馆看看
-      </van-button>
-    </van-empty>
+      <van-empty v-else description="暂无借阅记录">
+        <template #description>
+          <p v-if="activeStatus !== 'ALL'">暂无{{ getStatusTextByCode(activeStatus) }}记录</p>
+          <p v-else-if="searchKeyword">未找到「{{ searchKeyword }}」相关记录</p>
+          <p v-else>暂无借阅记录</p>
+        </template>
+        <van-button
+          round
+          type="primary"
+          size="small"
+          @click="navigateTo('/library')"
+          class="empty-btn"
+        >
+          去图书馆看看
+        </van-button>
+      </van-empty>
+    </template>
   </div>
 </template>
 
@@ -177,32 +183,41 @@ export default {
   setup() {
     const router = useRouter()
     const records = ref([])
+    const loading = ref(false)
     const activeStatus = ref('ALL')
     const searchKeyword = ref('')
     const showSearch = ref(false)
 
+    const isOverdue = (record) => {
+      if (record.status !== 1) return false
+      if (!record.dueDate) return false
+      return new Date(record.dueDate) < new Date()
+    }
+
+    const canOperate = (record) => {
+      return record.status === 1
+    }
+
     const stats = computed(() => {
+      const list = records.value
       return {
-        borrowing: records.value.filter(r => r.status === 1).length,
-        returned: records.value.filter(r => r.status === 2).length,
-        overdue: records.value.filter(r => r.status === 3).length
+        borrowing: list.filter(r => r.status === 1 && !isOverdue(r)).length,
+        returned: list.filter(r => r.status === 2).length,
+        overdue: list.filter(r => isOverdue(r)).length
       }
     })
 
     const filteredRecords = computed(() => {
       let result = [...records.value]
 
-      // 按状态筛选
-      if (activeStatus.value !== 'ALL') {
-        const statusMap = {
-          'BORROWED': 1,
-          'RETURNED': 2,
-          'OVERDUE': 3
-        }
-        result = result.filter(r => r.status === statusMap[activeStatus.value])
+      if (activeStatus.value === 'BORROWED') {
+        result = result.filter(r => r.status === 1 && !isOverdue(r))
+      } else if (activeStatus.value === 'RETURNED') {
+        result = result.filter(r => r.status === 2)
+      } else if (activeStatus.value === 'OVERDUE') {
+        result = result.filter(r => isOverdue(r))
       }
 
-      // 按关键词搜索
       if (searchKeyword.value) {
         const keyword = searchKeyword.value.toLowerCase()
         result = result.filter(r =>
@@ -214,24 +229,26 @@ export default {
       return result
     })
 
-    const getStatusClass = (status) => {
+    const getTagClass = (record) => {
+      if (isOverdue(record)) return 'tag-red'
       const classes = {
-        0: 'status-reserved',
-        1: 'status-borrowed',
-        2: 'status-returned',
-        3: 'status-overdue'
+        0: 'tag-blue',
+        1: 'tag-gold',
+        2: 'tag-green',
+        3: 'tag-red'
       }
-      return classes[status] || 'status-borrowed'
+      return classes[record.status] || 'tag-blue'
     }
 
-    const getStatusText = (status) => {
+    const getDisplayStatusText = (record) => {
+      if (isOverdue(record)) return '已逾期'
       const texts = {
         0: '已预约',
         1: '借阅中',
         2: '已归还',
         3: '已逾期'
       }
-      return texts[status] || '未知'
+      return texts[record.status] || '未知'
     }
 
     const getStatusTextByCode = (code) => {
@@ -243,39 +260,67 @@ export default {
       return texts[code] || ''
     }
 
-    const isOverdue = (record) => {
-      if (record.status !== 1) return false
-      return new Date(record.dueDate) < new Date()
-    }
-
     const formatDate = (dateStr) => {
-      if (!dateStr) return ''
+      if (!dateStr) return '--'
       const date = new Date(dateStr)
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+      if (Number.isNaN(date.getTime())) return '--'
+      const pad = (n) => String(n).padStart(2, '0')
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
     }
 
     const formatDateShort = (dateStr) => {
-      if (!dateStr) return ''
+      if (!dateStr) return '--'
       const date = new Date(dateStr)
-      return `${date.getMonth() + 1}月${date.getDate()}日`
+      if (Number.isNaN(date.getTime())) return '--'
+      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
     }
 
+    const dueHint = (record) => {
+      if (!record.dueDate || record.status === 2) return ''
+      const due = new Date(record.dueDate)
+      if (Number.isNaN(due.getTime())) return ''
+      const now = new Date()
+      const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24))
+      if (diffDays < 0) return `逾期 ${Math.abs(diffDays)} 天`
+      if (diffDays === 0) return '今天到期'
+      if (diffDays <= 7) return `还剩 ${diffDays} 天`
+      return ''
+    }
+
+    const setStatus = (status) => {
+      activeStatus.value = status
+    }
+
+    const noop = () => {}
+
     const loadRecords = async () => {
+      loading.value = true
       try {
         const res = await bookApi.getBorrowRecords()
         records.value = res.data || []
       } catch (error) {
-        showToast('获取借阅记录失败')
+        showToast(error?.message || '获取借阅记录失败')
+      } finally {
+        loading.value = false
       }
     }
 
     const handleRenew = async (record) => {
+      if (!canOperate(record)) {
+        showToast('已归还，无法续借')
+        return
+      }
+      if ((record.renewCount || 0) >= 2) {
+        showToast('续借次数已达上限')
+        return
+      }
       try {
         await showDialog({
           title: '确认续借',
           message: `确定要续借《${record.bookName}》吗？\n\n续借后将延长15天还书期限。`,
           showCancelButton: true,
-          confirmButtonText: '确认续借'
+          confirmButtonText: '确认续借',
+          confirmButtonColor: 'var(--primary)'
         })
 
         const res = await bookApi.renewBook(record.id)
@@ -284,7 +329,7 @@ export default {
             message: '续借成功！',
             icon: 'success'
           })
-          loadRecords()
+          await loadRecords()
         } else {
           showToast({
             message: res.message || '续借失败',
@@ -292,20 +337,24 @@ export default {
           })
         }
       } catch (error) {
-        if (error) {
-          showToast(error.message || '续借失败')
+        if (error !== 'cancel') {
+          showToast(error?.message || '续借失败')
         }
       }
     }
 
     const handleReturn = async (record) => {
+      if (!canOperate(record)) {
+        showToast('已归还，无需再次操作')
+        return
+      }
       try {
         await showDialog({
           title: '确认归还',
           message: `确定要归还《${record.bookName}》吗？`,
           showCancelButton: true,
           confirmButtonText: '确认归还',
-          confirmButtonColor: '#07c160'
+          confirmButtonColor: 'var(--success)'
         })
 
         const res = await bookApi.returnBook(record.id)
@@ -314,7 +363,7 @@ export default {
             message: '归还成功！',
             icon: 'success'
           })
-          loadRecords()
+          await loadRecords()
         } else {
           showToast({
             message: res.message || '归还失败',
@@ -322,8 +371,8 @@ export default {
           })
         }
       } catch (error) {
-        if (error) {
-          showToast(error.message || '归还失败')
+        if (error !== 'cancel') {
+          showToast(error?.message || '归还失败')
         }
       }
     }
@@ -333,7 +382,8 @@ export default {
     }
 
     const goBack = () => {
-      router.back()
+      if (window.history.length > 1) router.back()
+      else router.push('/')
     }
 
     onMounted(() => {
@@ -342,18 +392,23 @@ export default {
 
     return {
       records,
+      loading,
       defaultCover: DEFAULT_COVER,
       activeStatus,
       searchKeyword,
       showSearch,
       stats,
       filteredRecords,
-      getStatusClass,
-      getStatusText,
+      getTagClass,
+      getDisplayStatusText,
       getStatusTextByCode,
       isOverdue,
+      canOperate,
+      dueHint,
       formatDate,
       formatDateShort,
+      setStatus,
+      noop,
       handleRenew,
       handleReturn,
       navigateTo,
@@ -364,36 +419,40 @@ export default {
 </script>
 
 <style scoped>
-.borrow-records-container {
+.borrow-records-page {
   min-height: 100vh;
-  background: #f5f7fa;
-  padding-bottom: 20px;
+  background: var(--bg-page);
+  padding-bottom: 24px;
 }
 
-/* 搜索区域 */
 .search-section {
-  background: #fff;
-  padding: 10px 0;
-  border-bottom: 1px solid #f0f0f0;
+  background: var(--bg-card);
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-/* 统计卡片 */
+.search-action {
+  color: var(--primary);
+  font-size: var(--font-md);
+  font-weight: 600;
+}
+
 .stats-card {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
-  margin: 15px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  margin: 16px;
   padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .stat-value {
@@ -403,7 +462,7 @@ export default {
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: var(--font-sm);
   opacity: 0.9;
 }
 
@@ -413,47 +472,58 @@ export default {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* 筛选标签 */
 .filter-section {
   display: flex;
-  padding: 12px 15px;
+  padding: 12px 16px;
   gap: 10px;
-  background: #fff;
-  margin-bottom: 8px;
+  background: var(--bg-card);
+  margin: 0 16px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .filter-tag {
   flex: 1;
   text-align: center;
-  padding: 8px;
-  border-radius: 20px;
-  font-size: 13px;
-  color: #666;
-  background: #f5f5f5;
+  padding: 8px 4px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  background: var(--bg-muted);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all .2s ease;
+  border: 1px solid var(--border-color);
 }
 
 .filter-tag.active {
-  background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
-  color: #fff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: var(--text-inverse);
+  border-color: transparent;
 }
 
 .filter-tag:active {
   transform: scale(0.95);
 }
 
-/* 记录列表 */
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 280px;
+}
+
 .records-list {
-  padding: 0 15px;
+  padding: 0 16px;
 }
 
 .record-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 15px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 16px;
   margin-bottom: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .record-header {
@@ -461,37 +531,12 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
-}
-
-.status-tag {
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 15px;
-}
-
-.status-reserved {
-  background: #e8f4ff;
-  color: #1989fa;
-}
-
-.status-borrowed {
-  background: #fff8e6;
-  color: #ff976a;
-}
-
-.status-returned {
-  background: #e8f8ef;
-  color: #07c160;
-}
-
-.status-overdue {
-  background: #fee2e2;
-  color: #ef4444;
+  gap: 8px;
 }
 
 .record-time {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
 }
 
 .record-body {
@@ -506,18 +551,19 @@ export default {
 
 .book-info {
   flex: 1;
+  min-width: 0;
 }
 
 .book-name {
-  font-size: 16px;
+  font-size: var(--font-md);
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 
 .book-author {
-  font-size: 13px;
-  color: #999;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
   margin-bottom: 10px;
 }
 
@@ -529,25 +575,35 @@ export default {
 
 .date-item {
   display: flex;
-  font-size: 12px;
+  font-size: var(--font-sm);
+  align-items: baseline;
 }
 
 .date-label {
-  color: #999;
-  width: 45px;
+  color: var(--text-muted);
+  width: 40px;
+  flex-shrink: 0;
 }
 
 .date-value {
-  color: #333;
+  color: var(--text-secondary);
+}
+
+.due-hint {
+  font-style: normal;
+  margin-left: 6px;
+  font-size: var(--font-xs);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .overdue-text {
-  color: #ef4444;
+  color: var(--danger);
   font-weight: 600;
 }
 
 .success-text {
-  color: #07c160;
+  color: var(--success);
 }
 
 .record-footer {
@@ -555,15 +611,17 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-color);
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .renew-info {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
 }
 
 .action-buttons {
@@ -575,7 +633,6 @@ export default {
   min-width: 70px;
 }
 
-/* 空状态 */
 .empty-btn {
   margin-top: 10px;
 }

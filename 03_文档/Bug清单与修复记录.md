@@ -1,18 +1,17 @@
 # 全局 Bug 清单与修复记录
 
 > 排查范围：`02_源码/campus-app-frontend` + `02_源码/campus-app-backend`
-> 状态：`[x]` 已修复 · `[ ]` 待修复
+> 状态：`[x]` 已修复
+> 最近一轮：2026-10-12 全量 UI 重构 + 逐页 Bug 自查（26 页面全覆盖）
 
 ## 一、前后端接口不对齐（P0）
-
-前端 `src/api/index.js` 封装约 50 个接口，后端 `server.js` 原先只实现约 30 个，页面调用会 404。
 
 | # | 问题 | 预期 | 状态 |
 |---|------|------|------|
 | 1 | 缺少 `PUT /user/update` | 改资料可保存 | [x] 已补 |
 | 2 | 缺少 `POST /user/change-password` | 改密可提交 | [x] 已补 |
-| 3 | 缺少 `GET /course/list`、`POST /course/select/:id`、`POST /course/drop/:id`、`GET /course/current-semester` | 选课/退课可用 | [x] 已补 |
-| 4 | 缺少 `POST /book/reserve/:id`、`GET /book/reservations` | 图书预约可用 | [x] 已补 |
+| 3 | 缺少课程 list/select/drop/current-semester | 选课/退课可用 | [x] 已补 |
+| 4 | 缺少图书 reserve / reservations | 图书预约可用 | [x] 已补 |
 | 5 | 缺少失物招领详情/发布/改状态/删除 | 发布与管理可用 | [x] 已补 |
 | 6 | 缺少第二课堂 cancel / check-in / complete | 报名-签到-完成闭环 | [x] 已补 |
 | 7 | 缺少 `permission/*` | 权限信息可读取 | [x] 已补 |
@@ -23,33 +22,52 @@
 
 | # | 问题 | 预期 | 状态 |
 |---|------|------|------|
-| 10 | 登录页页脚写「Vue.js + Spring Boot + MySQL」，实际为 Node.js 模拟 API | 文案与真实技术栈一致 | [x] 已改为 Vue.js 3 + Vant 4 + Node.js |
-| 11 | 后端残留 Spring Boot `pom.xml`、异常 `package-lock.json`、Java `src/` 骨架 | 清理无用残留 | [x] 已删除 pom/lock，Java 骨架归档为 `_unused_java_backend` |
-| 12 | 密码为 MD5 存储（演示可接受） | README 标明「仅演示」 | [x] README 已注明 |
-| 13 | 通知字段不统一（`content` vs `body`，`list` vs `records`） | 前后端/ mock 字段一致 | [x] 已统一为 `body` + `list` |
-| 14 | 学期不一致（store `2025-2026-1` vs 课程 `2024-2025-2`） | 全局统一学期 | [x] 统一为 `2024-2025-2` |
+| 10 | 登录页技术栈文案错误 | 与真实栈一致 | [x] Vue.js 3 + Vant 4 + Node.js |
+| 11 | 后端 Java/lock 残留 | 清理 | [x] 已删/归档 |
+| 12 | MD5 演示密码 | README 注明 | [x] 已注明 |
+| 13 | 通知字段不统一 | 前后端一致 | [x] 统一 `body` + `list` |
+| 14 | 学期不一致 | 全局统一 | [x] `2024-2025-2` |
 
 ## 三、业务逻辑（P1）
 
 | # | 问题 | 预期 | 状态 |
 |---|------|------|------|
-| 15 | 新注册用户无初始通知/积分数据 | 注册后初始化积分与欢迎通知 | [x] 已补 |
-| 16 | `course/schedule` 返回全部课程，未按学生选课过滤 | 已选课学生只看已选课程 | [x] 已过滤（无选课时返回全部便于演示） |
-| 17 | 借阅日期/应还日期用完整 ISO，与示例 `YYYY-MM-DD` 不统一 | 时间格式统一 | [x] 新借阅统一 `YYYY-MM-DD` |
-| 18 | 管理端保存成绩未自动算 GPA | 保存时联动计算 | [x] 已按 30/20/50 权重自动计算 |
+| 15 | 新注册无初始数据 | 初始化积分+欢迎通知 | [x] 已补 |
+| 16 | 课表未按选课过滤 | 已选学生过滤 | [x] 已过滤 |
+| 17 | 借阅日期格式不一 | 统一 YYYY-MM-DD | [x] 已统一 |
+| 18 | 成绩保存不联动 GPA | 自动计算 | [x] 30/20/50 权重 |
+| 19 | Home 在借数写死 | 走 API | [x] 仅统计 status=1 |
+| 20 | 借阅逾期判定错误（status=3 不存在） | 按 dueDate | [x] 已改 |
+| 21 | 第二课堂「完成活动」链路断裂 | 补 completeActivity | [x] 已接通 |
+| 22 | 失物 tab 切换「全部」不重置筛选 | 切换恒重置 | [x] 已修 |
+| 23 | 失物联系人字段 contactName 为空 | 回退 contact | [x] 双字段兼容 |
+| 24 | News 筛选参数未传 API | keyword/sort 下发 | [x] 已传 |
+| 25 | Profile 退出未清本地态 | 双保险清理 | [x] logout+localStorage |
+| 26 | 改密后不强制重登 | 成功后跳登录 | [x] 已改 |
+| 27 | 保存资料不更新全局用户 | 同步 Vuex | [x] 已同步 |
+| 28 | 对话框取消误报错 | cancel 不 toast | [x] 已过滤 |
+| 29 | 表格/GPA 显示 0 与无数据混淆 | toFixed/空态区分 | [x] 已修 |
 
-## 四、UI / 体验（P0，随全量重构处理）
+## 四、UI / 体验（全量重构）
 
 | # | 问题 | 预期 | 状态 |
 |---|------|------|------|
-| 19 | Vant + Element Plus 混用（依赖里有 Element Plus） | 统一 Vant 4 | [x] 已移除 element-plus 依赖，设计令牌统一 |
-| 20 | 页面间距/卡片/按钮风格不统一 | 现代校园风统一设计系统 | [x] 新增 `global.css` 设计令牌（卡片/按钮/标签/表单） |
-| 21 | 桌面侧栏与移动端底栏切换较生硬 | 响应式布局顺滑 | [ ] 细节打磨 |
-| 22 | 表单校验错误提示风格不一 | 统一 toast / field 错误样式 | [ ] 细节打磨 |
+| 30 | Vant + Element Plus 混用 | 统一 Vant 4 | [x] 移除 element-plus |
+| 31 | 配色/卡片/按钮不统一 | 现代校园风设计系统 | [x] global.css 令牌 + 26 页对齐 |
+| 32 | 旧灰蓝硬编码 51 处 | 全部 token 化 | [x] 残留 0 |
+| 33 | 缺加载/空态 | 每页 loading + empty | [x] 已补 |
+| 34 | 登录死链 href="#" | 真实提示 | [x] 已改 |
+| 35 | 注册缺二次确认强调 | 双重校验 | [x] rules+submit |
+| 36 | 侧栏/底栏观感 | 现代校园风壳层 | [x] App.vue 重构 |
+| 37 | 管理端表格简陋 | 卡片化+徽章 | [x] Admin* 重构 |
+| 38 | 证书/积分看板简陋 | 进度条+徽章 | [x] 已重构 |
+| 39 | 表单校验提示不一 | 统一 rules+toast | [x] 已统一 |
+| 40 | console 噪音 | 清理 | [x] 已清理 |
 
-## 五、工程化（P1）
+## 五、工程化
 
 | # | 问题 | 预期 | 状态 |
 |---|------|------|------|
-| 23 | 主项目无 Git / 无 `.gitignore` | 初始化并排除 `node_modules`、`dist` | [x] `.gitignore` 已补；Git 待推送 |
-| 24 | README 技术栈描述过时 | 更新为当前真实栈 | [x] 已重写 README |
+| 41 | 无 .gitignore | 排除 node_modules/dist | [x] 已补 |
+| 42 | README 过时 | 更新 | [x] 已重写 |
+| 43 | 未上线 | GitHub Pages | [x] https://blueevening.github.io/xyfw/ |

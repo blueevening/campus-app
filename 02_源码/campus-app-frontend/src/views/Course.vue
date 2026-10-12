@@ -1,12 +1,12 @@
 <template>
-  <div class="course-container">
+  <div class="page course-page">
     <van-nav-bar title="我的课程表" left-arrow @click-left="goBack">
       <template #right>
         <span class="nav-action" @click="toggleWeekend">{{ showWeekend ? '隐藏周末' : '显示周末' }}</span>
       </template>
     </van-nav-bar>
 
-    <div class="semester-bar">
+    <div class="semester-bar section-block">
       <van-dropdown-menu class="semester-menu">
         <van-dropdown-item v-model="currentSemester" :options="semesterOptions" @change="loadCourses" />
       </van-dropdown-menu>
@@ -27,57 +27,64 @@
       </div>
     </div>
 
-    <div class="schedule-wrap">
-      <div class="schedule-grid" :class="{ 'with-weekend': showWeekend }">
-        <!-- 表头 -->
-        <div class="grid-corner" :style="{ gridColumn: 1, gridRow: 1 }">节次</div>
-        <div
-          v-for="(day, di) in visibleDays"
-          :key="day.label"
-          class="day-head"
-          :class="{ today: day.isToday }"
-          :style="{ gridColumn: di + 2, gridRow: 1 }"
-        >
-          <span class="day-name">{{ day.short }}</span>
-          <span class="day-num">{{ day.dateNum }}</span>
-        </div>
+    <div v-if="loading" class="loading-wrap">
+      <van-loading type="spinner" color="var(--primary)">加载课表中...</van-loading>
+    </div>
 
-        <!-- 时间列 + 空槽 -->
-        <template v-for="(period, pi) in timePeriods" :key="'p' + period.id">
-          <div class="time-label" :style="{ gridColumn: 1, gridRow: pi + 2 }">
-            <span class="p-no">{{ period.id }}</span>
-            <span class="p-time">{{ period.time }}</span>
-          </div>
+    <template v-else>
+      <div class="schedule-wrap">
+        <div class="schedule-grid" :class="{ 'with-weekend': showWeekend }">
+          <div class="grid-corner" :style="{ gridColumn: 1, gridRow: 1 }">节次</div>
           <div
             v-for="(day, di) in visibleDays"
-            :key="period.id + '-' + day.num"
-            class="slot"
-            :class="{ 'is-today-col': day.isToday }"
-            :style="{ gridColumn: di + 2, gridRow: pi + 2 }"
-          ></div>
-        </template>
+            :key="day.label"
+            class="day-head"
+            :class="{ today: day.isToday }"
+            :style="{ gridColumn: di + 2, gridRow: 1 }"
+          >
+            <span class="day-name">{{ day.short }}</span>
+            <span class="day-num">{{ day.dateNum }}</span>
+          </div>
 
-        <!-- 课程块（跨节合并） -->
-        <div
-          v-for="block in courseBlocks"
-          :key="block.key"
-          class="course-block"
-          :style="block.style"
-          @click="openDetail(block.course, block)"
-        >
-          <p class="c-name">{{ block.course.courseName }}</p>
-          <p class="c-loc">{{ shortLoc(block.course.location) }}</p>
-          <p class="c-range">{{ block.start }}-{{ block.end }}节</p>
+          <template v-for="(period, pi) in timePeriods" :key="'p' + period.id">
+            <div class="time-label" :style="{ gridColumn: 1, gridRow: pi + 2 }">
+              <span class="p-no">{{ period.id }}</span>
+              <span class="p-time">{{ period.time }}</span>
+            </div>
+            <div
+              v-for="(day, di) in visibleDays"
+              :key="period.id + '-' + day.num"
+              class="slot"
+              :class="{ 'is-today-col': day.isToday }"
+              :style="{ gridColumn: di + 2, gridRow: pi + 2 }"
+            ></div>
+          </template>
+
+          <div
+            v-for="block in courseBlocks"
+            :key="block.key"
+            class="course-block"
+            :style="block.style"
+            @click="openDetail(block.course, block)"
+          >
+            <p class="c-name">{{ block.course.courseName }}</p>
+            <p class="c-loc">{{ shortLoc(block.course.location) }}</p>
+            <p class="c-range">{{ block.start }}-{{ block.end }}节</p>
+          </div>
+        </div>
+
+        <div v-if="courseBlocks.length === 0" class="empty-state schedule-empty">
+          <van-empty description="本学期暂无课程安排" image-size="80" />
         </div>
       </div>
-    </div>
 
-    <div class="legend">
-      <span class="legend-item"><i class="dot d1"></i>专业核心</span>
-      <span class="legend-item"><i class="dot d2"></i>编程实践</span>
-      <span class="legend-item"><i class="dot d3"></i>通识拓展</span>
-      <span class="legend-hint">点击课程查看详情</span>
-    </div>
+      <div class="legend">
+        <span class="legend-item"><i class="dot d1"></i>专业核心</span>
+        <span class="legend-item"><i class="dot d2"></i>编程实践</span>
+        <span class="legend-item"><i class="dot d3"></i>通识拓展</span>
+        <span class="legend-hint">点击课程查看详情</span>
+      </div>
+    </template>
 
     <van-popup
       v-model:show="showDetail"
@@ -92,7 +99,7 @@
             <h3>{{ selectedCourse.courseName }}</h3>
             <p class="code">{{ selectedCourse.courseCode }}</p>
           </div>
-          <span class="credit-badge">{{ selectedCourse.credit }} 学分</span>
+          <span class="tag tag-gold">{{ selectedCourse.credit }} 学分</span>
         </div>
         <div class="detail-item">
           <van-icon name="user-o" />
@@ -107,12 +114,7 @@
           <span>{{ formatClassTime(selectedCourse.classTime) }}</span>
         </div>
         <div class="detail-actions">
-          <van-button
-            type="danger"
-            size="small"
-            round
-            @click="dropCourse"
-          >
+          <van-button type="danger" size="small" round @click="dropCourse">
             退选课程
           </van-button>
         </div>
@@ -129,12 +131,12 @@ import { showToast, showDialog } from 'vant'
 import { courseApi } from '../api'
 
 const PALETTE = [
-  { bg: '#e8f0fb', border: '#2c5282', text: '#1a365d' },
-  { bg: '#e6f6ef', border: '#276749', text: '#22543d' },
-  { bg: '#fef6e4', border: '#d69e2e', text: '#744210' },
-  { bg: '#f3e8ff', border: '#6b46c1', text: '#44337a' },
-  { bg: '#e6fffa', border: '#285e61', text: '#234e52' },
-  { bg: '#fff5f5', border: '#c53030', text: '#742a2a' }
+  { bg: 'var(--primary-soft)', border: 'var(--primary)', text: 'var(--primary-dark)' },
+  { bg: 'var(--success-soft)', border: 'var(--success)', text: 'var(--success)' },
+  { bg: 'var(--accent-soft)', border: 'var(--accent)', text: '#8a6a12' },
+  { bg: 'var(--danger-soft)', border: 'var(--danger)', text: 'var(--danger)' },
+  { bg: 'var(--info-soft)', border: 'var(--info)', text: 'var(--info)' },
+  { bg: 'var(--bg-muted)', border: 'var(--text-secondary)', text: 'var(--text-secondary)' }
 ]
 
 export default {
@@ -143,13 +145,13 @@ export default {
     const router = useRouter()
     const store = useStore()
     const courses = ref([])
+    const loading = ref(false)
     const currentSemester = ref(store.getters.getCurrentSemester || '2025-2026-1')
     const showDetail = ref(false)
     const selectedCourse = ref(null)
     const showWeekend = ref(false)
 
     const now = new Date()
-    // JS: 0=周日, 课表 day: 1=周一 ... 7=周日
     const jsDay = now.getDay()
     const todayNum = jsDay === 0 ? 7 : jsDay
 
@@ -163,11 +165,9 @@ export default {
       { num: 7, label: '周日', short: '日' }
     ].map(d => ({
       ...d,
-      isToday: d.num === todayNum,
-      num: d.num
+      isToday: d.num === todayNum
     }))
 
-    // 显示日期序号（本周示意）
     const weekOffset = 0
     const monday = new Date(now)
     monday.setDate(now.getDate() - (todayNum - 1) + weekOffset * 7)
@@ -192,7 +192,7 @@ export default {
       { id: 6, time: '14:50' },
       { id: 7, time: '16:00' },
       { id: 8, time: '16:50' },
-      { id: 9, time: '19:00', lunch: false },
+      { id: 9, time: '19:00' },
       { id: 10, time: '19:50' }
     ]
 
@@ -233,7 +233,7 @@ export default {
         const times = parseClassTime(course.classTime)
         times.forEach((t, idx) => {
           if (!cols.includes(t.day)) return
-          const colIndex = cols.indexOf(t.day) // 0-based among visible days
+          const colIndex = cols.indexOf(t.day)
           const palette = PALETTE[course.id % PALETTE.length]
           const span = Math.max(1, t.end - t.start + 1)
           blocks.push({
@@ -255,8 +255,6 @@ export default {
       return blocks
     })
 
-    const isTodayDay = (day) => day === todayNum
-
     const shortLoc = (loc) => {
       if (!loc) return ''
       return loc.replace('教学楼', '').replace('实验楼', '实验')
@@ -270,13 +268,16 @@ export default {
     }
 
     const loadCourses = async () => {
+      loading.value = true
       try {
         const res = await courseApi.getStudentSchedule({
           semester: currentSemester.value
         })
         courses.value = res.data || []
       } catch (error) {
-        showToast('获取课程失败')
+        showToast(error?.message || '获取课程失败')
+      } finally {
+        loading.value = false
       }
     }
 
@@ -291,15 +292,15 @@ export default {
           title: '确认退选',
           message: `确定要退选 ${selectedCourse.value.courseName} 吗？`,
           showCancelButton: true,
-          confirmButtonColor: '#e53e3e'
+          confirmButtonColor: 'var(--danger)'
         })
         await courseApi.dropCourse(selectedCourse.value.id)
         showToast('退选成功')
         showDetail.value = false
         loadCourses()
       } catch (error) {
-        if (error && error !== 'cancel') {
-          showToast(error.message || '退选失败')
+        if (error !== 'cancel') {
+          showToast(error?.message || '退选失败')
         }
       }
     }
@@ -319,6 +320,7 @@ export default {
 
     return {
       courses,
+      loading,
       currentSemester,
       showDetail,
       selectedCourse,
@@ -331,7 +333,6 @@ export default {
       courseCount,
       totalCredits,
       todayCount,
-      isTodayDay,
       shortLoc,
       formatClassTime,
       loadCourses,
@@ -345,60 +346,82 @@ export default {
 </script>
 
 <style scoped>
-.course-container {
+.course-page {
   min-height: 100vh;
-  background: #f0f4f8;
+  background: var(--bg-page);
   padding-bottom: 70px;
 }
 
 .nav-action {
-  font-size: 12px;
-  color: #2c5282;
-  font-weight: 500;
+  font-size: var(--font-sm);
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .semester-bar {
-  background: #fff;
+  margin: 12px 16px 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .semester-menu {
-  --van-dropdown-menu-background: #fff;
+  --van-dropdown-menu-background: var(--bg-card);
 }
 
 .stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  padding: 12px 12px 4px;
+  padding: 12px 16px 4px;
 }
 
 .stat-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 12px 8px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 14px 8px;
   text-align: center;
-  border: 1px solid #e8eef5;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .stat-card strong {
   display: block;
-  font-size: 20px;
-  color: #2c5282;
+  font-size: var(--font-xl);
+  color: var(--primary);
   line-height: 1.2;
 }
 
 .stat-card span {
-  font-size: 11px;
-  color: #718096;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 320px;
 }
 
 .schedule-wrap {
-  margin: 10px 12px 0;
-  background: #fff;
-  border-radius: 14px;
+  margin: 12px 16px 0;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid #e8eef5;
-  box-shadow: 0 4px 16px rgba(44, 82, 130, 0.06);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: 44px repeat(5, minmax(0, 1fr));
+  grid-template-rows: 40px repeat(10, 54px);
+  position: relative;
+  min-height: 580px;
+}
+
+.schedule-grid.with-weekend {
+  grid-template-columns: 40px repeat(7, minmax(0, 1fr));
 }
 
 @media (min-width: 900px) {
@@ -414,29 +437,15 @@ export default {
   }
 }
 
-.schedule-grid {
-  display: grid;
-  grid-template-columns: 44px repeat(5, minmax(0, 1fr));
-  grid-template-rows: 40px repeat(10, 54px);
-  position: relative;
-  min-height: 580px;
-}
-
-.schedule-grid.with-weekend {
-  grid-template-columns: 40px repeat(7, minmax(0, 1fr));
-}
-
 .grid-corner {
-  grid-column: 1;
-  grid-row: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
-  color: #a0aec0;
-  background: #f7fafc;
-  border-right: 1px solid #edf2f7;
-  border-bottom: 1px solid #edf2f7;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  background: var(--bg-muted);
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .day-head {
@@ -444,29 +453,29 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f7fafc;
-  border-bottom: 1px solid #edf2f7;
-  border-right: 1px solid #edf2f7;
+  background: var(--bg-muted);
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
   gap: 1px;
 }
 
 .day-head.today {
-  background: #ebf2fa;
+  background: var(--primary-soft);
 }
 
 .day-head .day-name {
-  font-size: 12px;
+  font-size: var(--font-sm);
   font-weight: 600;
-  color: #2c5282;
+  color: var(--primary);
 }
 
 .day-head.today .day-name {
-  color: #d69e2e;
+  color: var(--accent);
 }
 
 .day-head .day-num {
-  font-size: 10px;
-  color: #a0aec0;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
 }
 
 .time-label {
@@ -474,42 +483,43 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #fafbfc;
-  border-right: 1px solid #edf2f7;
-  border-bottom: 1px solid #f1f5f9;
+  background: var(--bg-muted);
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
   gap: 2px;
 }
 
 .time-label .p-no {
-  font-size: 12px;
+  font-size: var(--font-sm);
   font-weight: 600;
-  color: #4a5568;
+  color: var(--text-secondary);
 }
 
 .time-label .p-time {
-  font-size: 9px;
-  color: #a0aec0;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
 }
 
 .slot {
-  border-right: 1px solid #f1f5f9;
-  border-bottom: 1px solid #f1f5f9;
-  background: #fff;
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
 }
 
 .slot.is-today-col {
-  background: #f8fbff;
+  background: var(--primary-soft);
+  opacity: 0.55;
 }
 
 .course-block {
   margin: 2px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 6px 6px 4px;
-  border-left: 3px solid #2c5282;
+  border-left: 3px solid var(--primary);
   overflow: hidden;
   cursor: pointer;
   z-index: 2;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -520,7 +530,7 @@ export default {
 }
 
 .c-name {
-  font-size: 11px;
+  font-size: var(--font-xs);
   font-weight: 600;
   line-height: 1.25;
   display: -webkit-box;
@@ -530,8 +540,8 @@ export default {
 }
 
 .c-loc {
-  font-size: 10px;
-  opacity: 0.8;
+  font-size: var(--font-xs);
+  opacity: 0.85;
   margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -539,9 +549,13 @@ export default {
 }
 
 .c-range {
-  font-size: 9px;
-  opacity: 0.65;
+  font-size: var(--font-xs);
+  opacity: 0.7;
   margin-top: auto;
+}
+
+.schedule-empty {
+  padding: 24px 16px;
 }
 
 .legend {
@@ -549,9 +563,9 @@ export default {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-  padding: 12px 14px 20px;
-  font-size: 11px;
-  color: #718096;
+  padding: 12px 16px 20px;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
 }
 
 .legend-item {
@@ -567,13 +581,13 @@ export default {
   display: inline-block;
 }
 
-.dot.d1 { background: #2c5282; }
-.dot.d2 { background: #276749; }
-.dot.d3 { background: #d69e2e; }
+.dot.d1 { background: var(--primary); }
+.dot.d2 { background: var(--success); }
+.dot.d3 { background: var(--accent); }
 
 .legend-hint {
   margin-left: auto;
-  color: #a0aec0;
+  color: var(--text-muted);
 }
 
 .course-popup {
@@ -589,51 +603,38 @@ export default {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 8px;
+  gap: 12px;
 }
 
 .detail-head h3 {
-  font-size: 18px;
-  color: #1a202c;
+  font-size: var(--font-lg);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .detail-head .code {
-  font-size: 12px;
-  color: #a0aec0;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
   margin-top: 4px;
-}
-
-.credit-badge {
-  background: #fef6e4;
-  color: #b7791f;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 999px;
 }
 
 .detail-item {
   display: flex;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #f0f4f8;
-  font-size: 14px;
-  color: #4a5568;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-md);
+  color: var(--text-secondary);
 }
 
 .detail-item .van-icon {
   margin-right: 12px;
   font-size: 18px;
-  color: #2c5282;
+  color: var(--primary);
 }
 
 .detail-actions {
   margin-top: 20px;
   text-align: center;
-}
-
-/* 需要给 day-head / time-label / slot 定位到网格 */
-.day-head:nth-child(n + 2):nth-child(-n + 8) {
-  /* columns set via order in template */
 }
 </style>
