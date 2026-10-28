@@ -1,0 +1,22 @@
+{
+  "name": "校园服务平台 · 毕业设计",
+  "short_name": "校园服务",
+  "description": "课程表、成绩、图书馆、资讯、失物招领、第二课堂一站式校园服务",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#080c16",
+  "theme_color": "#080c16",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%232f5f9e'/><text x='96' y='128' font-size='80' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>校</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%232f5f9e'/><text x='256' y='340' font-size='220' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>校</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
