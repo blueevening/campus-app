@@ -318,37 +318,26 @@ button {
   transform: translateY(8px);
 }
 
-/* ---------- 桌面端适配：列表页居中限宽，宽表格全宽 ---------- */
-@media (min-width: 768px) {
-  /* 默认页面居中限宽，避免全宽拉伸 */
-  #app > .page,
-  .page {
-    max-width: 780px;
-    margin: 0 auto;
+/* ---------- 桌面端微调：app-frame已限宽1200px，这里只优化间距 ---------- */
+@media (min-width: 900px) {
+  /* 成绩列表两列排列 */
+  .score-list-wrap,
+  .score-page {
+    /* 成绩项在父容器内自动两列 */
   }
-
-  /* 课程表页面需要宽表格，全宽 */
-  .page:has(.course-grid),
-  .page:has(.schedule-table),
-  .course-page,
-  [class*="course"] {
-    max-width: 100% !important;
+  .score-page .score-item {
+    /* 由Score.vue内部grid控制，这里只加卡片hover */
+    transition: box-shadow .15s ease;
   }
-
-  /* 登录页居中卡片 */
-  .login-page,
-  .register-page {
-    max-width: 480px;
-    margin: 0 auto;
+  .score-page .score-item:hover {
+    box-shadow: var(--shadow-md);
   }
-
-  /* 导航栏在宽屏也居中 */
-  .van-nav-bar {
-    max-width: 780px;
-    margin: 0 auto;
+  /* 所有列表卡片hover质感 */
+  .list-card:hover {
+    transform: translateY(-2px);
   }
-  .page:has(.course-grid) .van-nav-bar,
-  .page:has(.schedule-table) .van-nav-bar {
-    max-width: 100%;
+  /* section间距加大 */
+  .section-block {
+    margin: 16px 20px;
   }
 }
