@@ -317,27 +317,3 @@ button {
   opacity: 0;
   transform: translateY(8px);
 }
-
-/* ---------- 桌面端微调：app-frame已限宽1200px，这里只优化间距 ---------- */
-@media (min-width: 900px) {
-  /* 成绩列表两列排列 */
-  .score-list-wrap,
-  .score-page {
-    /* 成绩项在父容器内自动两列 */
-  }
-  .score-page .score-item {
-    /* 由Score.vue内部grid控制，这里只加卡片hover */
-    transition: box-shadow .15s ease;
-  }
-  .score-page .score-item:hover {
-    box-shadow: var(--shadow-md);
-  }
-  /* 所有列表卡片hover质感 */
-  .list-card:hover {
-    transform: translateY(-2px);
-  }
-  /* section间距加大 */
-  .section-block {
-    margin: 16px 20px;
-  }
-}
