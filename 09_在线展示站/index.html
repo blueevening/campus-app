@@ -5,12 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>校园服务平台 · 毕业设计作品</title>
   <meta name="description" content="校园服务平台毕业设计作品展示：课程、成绩、图书馆、资讯、失物招领、第二课堂。手机与电脑均可访问。" />
-  <meta name="theme-color" content="#080c16" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1120" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f7fb" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="校园服务" />
   <meta property="og:title" content="校园服务平台 · 毕业设计作品" />
   <meta property="og:description" content="课程表、成绩、图书馆、资讯、失物招领、第二课堂一站式校园服务" />
   <meta property="og:type" content="website" />
+  <script>
+    // 防主题闪烁：绘制前根据本地偏好 / 系统设置设定 data-theme
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t !== 'light' && t !== 'dark') {
+          t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -30,7 +43,7 @@
         <a href="#access">访问</a>
         <a class="btn btn-primary btn-sm" href="https://campus-platform.surge.sh/#/login" target="_blank" rel="noopener">进入服务平台</a>
       </nav>
-      <button class="nav-toggle" id="navToggle" aria-label="菜单">☰</button>
+      <button class="nav-toggle" id="navToggle" aria-label="菜单" aria-expanded="false">☰</button>
     </div>
   </header>
 
@@ -96,6 +109,14 @@
         <div><strong>20+</strong><span>功能路由</span></div>
         <div><strong>2025-2026-1</strong><span>演示学年学期</span></div>
         <div><strong>双端</strong><span>手机 / 网页自适应</span></div>
+      </div>
+    </section>
+
+    <!-- TECH STACK -->
+    <section class="tech-strip" aria-label="技术栈">
+      <div class="container tech-row">
+        <span>技术栈</span>
+        <b>Vue 3</b><b>Vite</b><b>Vant 4</b><b>Vue Router</b><b>Pinia</b><b>Mock 数据</b><b>Surge 部署</b>
       </div>
     </section>
 
@@ -270,6 +291,8 @@
       <p class="muted">2025-2026 · 深蓝 / 金 · 手机与网页自适应</p>
     </div>
   </footer>
+
+  <button class="theme-toggle" id="themeToggle" aria-label="切换深浅色模式" title="切换深浅色模式">☀</button>
 
   <script src="js/app.js"></script>
 </body>
