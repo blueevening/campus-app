@@ -1,1 +1,299 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="description" content="校园服务平台 - 课程表、成绩、图书馆、资讯、失物招领、第二课堂"><link rel="icon" href="/xyfw/favicon.ico"><title>校园服务平台</title><script defer="defer" src="/xyfw/static/js/chunk-vendors.b1e07000.js"></script><script defer="defer" src="/xyfw/static/js/app.0f6c8649.js"></script><link href="/xyfw/static/css/chunk-vendors.b6230a7e.css" rel="stylesheet"><link href="/xyfw/static/css/app.cdb4f7ae.css" rel="stylesheet"></head><body><noscript><strong>请启用 JavaScript 后访问校园服务平台。</strong></noscript><div id="app"></div></body></html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>校园服务平台 · 毕业设计作品</title>
+  <meta name="description" content="校园服务平台毕业设计作品展示：课程、成绩、图书馆、资讯、失物招领、第二课堂。手机与电脑均可访问。" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1120" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f7fb" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="校园服务" />
+  <meta property="og:title" content="校园服务平台 · 毕业设计作品" />
+  <meta property="og:description" content="课程表、成绩、图书馆、资讯、失物招领、第二课堂一站式校园服务" />
+  <meta property="og:type" content="website" />
+  <script>
+    // 防主题闪烁：绘制前根据本地偏好 / 系统设置设定 data-theme
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t !== 'light' && t !== 'dark') {
+          t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<div class="bg-orbs" aria-hidden="true"></div>
+
+  <header class="nav" id="topNav">
+    <div class="container nav-inner">
+      <a class="logo" href="#hero">
+        <span class="logo-mark">校</span>
+        <span class="logo-text">校园服务平台</span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="#capabilities">能力</a>
+        <a href="#roles">权限</a>
+        <a href="#quality">工程质量</a>
+        <a href="#access">访问</a>
+        <a class="btn btn-primary btn-sm" href="https://campus-platform.surge.sh/#/login" target="_blank" rel="noopener">进入服务平台</a>
+      </nav>
+      <button class="nav-toggle" id="navToggle" aria-label="菜单" aria-expanded="false">☰</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero" id="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="dot"></span>移动互联应用技术 · 毕业设计</p>
+          <h1>校园生活<br /><em>一站式解决</em></h1>
+          <p class="lead">
+            课表、成绩、图书馆、资讯、失物、第二课堂整合为同一套校园服务平台。
+            权限清晰、双端适配，打开链接即可演示。
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://campus-platform.surge.sh/#/login" target="_blank" rel="noopener">立即体验</a>
+            <a class="btn btn-ghost" href="#capabilities">浏览能力</a>
+          </div>
+          <div class="hero-chips">
+            <span>2025-2026 第一学期</span>
+            <span>Vue3 · Vant</span>
+            <span>手机 / 网页</span>
+          </div>
+        </div>
+
+        <div class="hero-stage" aria-hidden="true">
+          <div class="glow-ring"></div>
+          <div class="phone">
+            <div class="phone-bar"></div>
+            <div class="phone-body">
+              <div class="ui-top">
+                <div>
+                  <small>2025-2026-1 · 第 3 教学周</small>
+                  <strong>Hi，张三</strong>
+                </div>
+                <div class="ui-avatar">张</div>
+              </div>
+              <div class="ui-stats">
+                <div><b>3</b><span>今日课</span></div>
+                <div><b>1</b><span>在借</span></div>
+                <div><b>10</b><span>课二分</span></div>
+              </div>
+              <div class="ui-grid">
+                <i>课表</i><i>成绩</i><i>图书</i><i>资讯</i>
+                <i>失物</i><i>课二</i><i>证书</i><i>我的</i>
+              </div>
+              <div class="ui-card">
+                <div class="ui-row"><span>移动应用开发</span><em>1-2 节</em></div>
+                <div class="ui-row"><span>数据库原理</span><em>3-4 节</em></div>
+              </div>
+            </div>
+          </div>
+          <div class="float-tag f1">GPA 3.52</div>
+          <div class="float-tag f2">报名 · 自动审核</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- METRICS -->
+    <section class="metrics">
+      <div class="container metrics-grid">
+        <div><strong>8</strong><span>核心业务模块</span></div>
+        <div><strong>20+</strong><span>功能路由</span></div>
+        <div><strong>2025-2026-1</strong><span>演示学年学期</span></div>
+        <div><strong>双端</strong><span>手机 / 网页自适应</span></div>
+      </div>
+    </section>
+
+    <!-- TECH STACK -->
+    <section class="tech-strip" aria-label="技术栈">
+      <div class="container tech-row">
+        <span>技术栈</span>
+        <b>Vue 3</b><b>Vite</b><b>Vant 4</b><b>Vue Router</b><b>Pinia</b><b>Mock 数据</b><b>Surge 部署</b>
+      </div>
+    </section>
+
+    <!-- CAPABILITIES -->
+    <section class="section" id="capabilities">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Capabilities</p>
+          <h2>覆盖学习与校园生活</h2>
+          <p>六大业务域一次讲清，每一项都能在完整平台里走通。</p>
+        </div>
+
+        <div class="bento">
+          <article class="card card-lg">
+            <div class="card-visual v-course">
+              <div class="mini-table">
+                <span></span><span class="fill"></span><span></span><span class="fill gold"></span><span></span>
+                <span class="fill"></span><span></span><span class="fill"></span><span></span><span></span>
+              </div>
+            </div>
+            <h3>课程表</h3>
+            <p>跨节连堂合并、今日高亮、周末可开关。2025-2026-1 学期排课，支持退课与详情查看。</p>
+          </article>
+
+          <article class="card card-lg">
+            <div class="card-visual v-score">
+              <div class="ring">3.52</div>
+              <p class="ring-label">加权 GPA</p>
+            </div>
+            <h3>成绩与 GPA</h3>
+            <p>平时 / 期中 / 期末明细，按学期筛选；管理员可录入成绩，学生端实时可见。</p>
+          </article>
+
+          <article class="card">
+            <div class="card-icon">图</div>
+            <h3>图书馆</h3>
+            <p>20+ 馆藏分类封面、借还续借、无库存可预约。</p>
+          </article>
+          <article class="card">
+            <div class="card-icon">讯</div>
+            <h3>校园资讯</h3>
+            <p>教务 / 学术 / 活动分类，支持发布与审核下架。</p>
+          </article>
+          <article class="card">
+            <div class="card-icon">物</div>
+            <h3>失物招领</h3>
+            <p>寻物招领双通道，时间地点联系方式完整。</p>
+          </article>
+          <article class="card">
+            <div class="card-icon">课二</div>
+            <h3>第二课堂</h3>
+            <p>已报名 / 未结束 / 已结束筛选；报名自动审核，可取消。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROLES -->
+    <section class="section alt" id="roles">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Permissions</p>
+          <h2>角色权限清晰</h2>
+          <p>班长由管理员任命，获得主要管理权限，无需逐项申请。</p>
+        </div>
+        <div class="roles-grid">
+          <article class="role-card admin">
+            <span class="role-badge">管理员</span>
+            <h3>全部权限</h3>
+            <ul>
+              <li>用户管理 / 任命班长</li>
+              <li>成绩录入</li>
+              <li>内容审核</li>
+              <li>证书审批</li>
+            </ul>
+          </article>
+          <article class="role-card monitor">
+            <span class="role-badge">班长</span>
+            <h3>主要管理权限</h3>
+            <ul>
+              <li>发布第二课堂活动</li>
+              <li>审核证书申请</li>
+              <li>资讯 / 失物内容管理</li>
+            </ul>
+          </article>
+          <article class="role-card student">
+            <span class="role-badge">学生</span>
+            <h3>基础服务</h3>
+            <ul>
+              <li>课表 / 成绩 / 图书馆</li>
+              <li>资讯 / 失物 / 报名签到</li>
+              <li>证书申请 · 取消报名</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUALITY -->
+    <section class="section" id="quality">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Engineering</p>
+          <h2>可写进答辩的工程质量</h2>
+          <p>不只是页面堆叠，安全、体验与演示稳定性都做过迭代。</p>
+        </div>
+        <div class="quality-grid">
+          <article class="q-card">
+            <span class="q-num">01</span>
+            <h3>安全与契约</h3>
+            <p>Token 签名校验、CORS 可配置、403 文案统一、角色鉴权到位。</p>
+          </article>
+          <article class="q-card">
+            <span class="q-num">02</span>
+            <h3>业务完整度</h3>
+            <p>报名自动审核与取消、内容下架、成绩录入、书目预约与封面体系。</p>
+          </article>
+          <article class="q-card">
+            <span class="q-num">03</span>
+            <h3>双端适配</h3>
+            <p>手机底部导航，网页侧栏布局；窗口缩放自动切换，均可自适应。</p>
+          </article>
+          <article class="q-card">
+            <span class="q-num">04</span>
+            <h3>演示可靠</h3>
+            <p>浏览器 Mock 零后端；学期 2025-2026-1；一键账号与通知链路。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACCESS -->
+    <section class="section alt" id="access">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Access</p>
+          <h2>打开链接就能用</h2>
+          <p>展示与演示分离：作品说明在本页，业务操作在服务平台。</p>
+        </div>
+        <div class="access-grid">
+          <a class="access-card primary" href="https://campus-platform.surge.sh/#/login" target="_blank" rel="noopener">
+            <span class="access-label">完整演示</span>
+            <h3>校园服务平台</h3>
+            <p>登录后使用全部业务功能</p>
+            <code>campus-platform.surge.sh</code>
+            <span class="access-go">打开 →</span>
+          </a>
+          <a class="access-card" href="https://campus-platform-demo.surge.sh" target="_blank" rel="noopener">
+            <span class="access-label">作品说明</span>
+            <h3>展示站（本页）</h3>
+            <p>功能、权限与工程质量介绍</p>
+            <code>campus-platform-demo.surge.sh</code>
+            <span class="access-go">打开 →</span>
+          </a>
+        </div>
+        <div class="account-bar">
+          <span>演示账号</span>
+          <code>2021001 / 123456</code>
+          <span>管理员</span>
+          <code>admin / 123456</code>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div>
+        <strong>校园服务平台</strong>
+        <p>毕业设计作品展示 · 仅供学习交流</p>
+      </div>
+      <p class="muted">2025-2026 · 深蓝 / 金 · 手机与网页自适应</p>
+    </div>
+  </footer>
+
+  <button class="theme-toggle" id="themeToggle" aria-label="切换深浅色模式" title="切换深浅色模式">☀</button>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
