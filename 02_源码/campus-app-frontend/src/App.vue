@@ -246,6 +246,9 @@ html, body {
   box-shadow: none;
   min-height: 100vh;
   border: none;
+  /* 关键：去掉transform和overflow，让van-tabbar的position:fixed相对viewport生效 */
+  transform: none;
+  overflow: visible;
 }
 
 .with-tabbar {
