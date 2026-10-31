@@ -1,2 +1,0 @@
-# GitHub Pages（仓库 Settings → Pages → Deploy from branch → main / root）
-# 本目录为纯静态站，无需构建。若用 Actions，workflow 见 .github/workflows/pages.yml
