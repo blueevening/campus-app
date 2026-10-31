@@ -418,19 +418,13 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 0.92em; }
   .section-head h2 { font-size: 42px; }
 }
 
-/* ===== 入场动画 ===== */
+/* ===== 入场动画（轻量，无首帧空白） ===== */
+.hero-copy, .hero-stage { animation: fadeUp 0.5s ease; }
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.hero-copy > * { animation: fadeUp 0.6s ease backwards; }
-.hero-copy > *:nth-child(1) { animation-delay: 0.05s; }
-.hero-copy > *:nth-child(2) { animation-delay: 0.15s; }
-.hero-copy > *:nth-child(3) { animation-delay: 0.25s; }
-.hero-copy > *:nth-child(4) { animation-delay: 0.35s; }
-.hero-copy > *:nth-child(5) { animation-delay: 0.45s; }
-.hero-stage { animation: fadeUp 0.8s 0.2s ease backwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
